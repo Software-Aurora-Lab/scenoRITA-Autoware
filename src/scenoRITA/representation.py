@@ -6,13 +6,13 @@ from typing import List, Set
 from deap import base
 
 from apollo.map_service import PositionEstimate
-from modules.perception.proto.perception_obstacle_pb2 import PerceptionObstacle
+from autoware_auto_perception_msgs.msg import ObjectClassification
 
 
 class ObstacleType(Enum):
-    VEHICLE = PerceptionObstacle.VEHICLE
-    PEDESTRIAN = PerceptionObstacle.PEDESTRIAN
-    BICYCLE = PerceptionObstacle.BICYCLE
+    VEHICLE = ObjectClassification.CAR
+    PEDESTRIAN = ObjectClassification.PEDESTRIAN
+    BICYCLE = ObjectClassification.BICYCLE
 
 
 class ObstacleMotion(Enum):

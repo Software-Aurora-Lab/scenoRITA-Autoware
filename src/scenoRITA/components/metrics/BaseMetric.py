@@ -7,7 +7,7 @@ from .Violation import Violation
 
 
 class BaseMetric(ABC):
-    FPS = 24
+    FPS = 30
 
     def __init__(self, topics: List[str], map_service: MapService) -> None:
         self.topics = topics

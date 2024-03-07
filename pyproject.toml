@@ -1,13 +1,13 @@
 [tool.poetry]
-name = "scenorita-v3"
+name = "scenorita-autoware"
 version = "0.1.0"
 description = ""
-authors = ["Y <yhuai@uci.edu>"]
+authors = ["S <shilonl2@uci.edu>"]
 readme = "README.md"
 packages = [{include = "src"}]
 
 [tool.poetry.dependencies]
-python = ">=3.11,<3.12"
+python = ">=3.10,<3.12"
 loguru = "^0.7.0"
 absl-py = "^1.4.0"
 cyber-record = "^0.1.12"

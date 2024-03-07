@@ -4,24 +4,24 @@ import time
 from pathlib import Path
 from typing import List, Tuple
 
-import networkx as nx
-from cyber_record.record import Record
+# import networkx as nx
+# from cyber_record.record import Record
 from shapely.geometry import LineString, Point, Polygon
 
 from apollo.map_service import MapService, PositionEstimate
-from apollo.utils import generate_adc_polygon, generate_polygon
+from autoware.utils import generate_adc_polygon, generate_polygon
 from config import PROJECT_NAME
-from modules.common.proto.geometry_pb2 import Point3D, PointENU
-from modules.common.proto.header_pb2 import Header
-from modules.perception.proto.perception_obstacle_pb2 import (
-    PerceptionObstacle,
-    PerceptionObstacles,
-)
-from modules.perception.proto.traffic_light_detection_pb2 import (
-    TrafficLight,
-    TrafficLightDetection,
-)
-from modules.routing.proto.routing_pb2 import LaneWaypoint, RoutingRequest
+# from modules.common.proto.geometry_pb2 import Point3D, PointENU
+# from modules.common.proto.header_pb2 import Header
+# from modules.perception.proto.perception_obstacle_pb2 import (
+#     PerceptionObstacle,
+#     PerceptionObstacles,
+# )
+# from modules.perception.proto.traffic_light_detection_pb2 import (
+#     TrafficLight,
+#     TrafficLightDetection,
+# )
+# from modules.routing.proto.routing_pb2 import LaneWaypoint, RoutingRequest
 from mylib import cubic_spline_planner, stanley_controller
 
 from ..representation import (
@@ -133,7 +133,7 @@ class ScenarioGenerator:
         :return: The generated obstacle.
         """
         obs_type = self.generate_obstacle_type()
-        width, length, height = self.generate_obstacle_dimensions(obs_type)
+        width, length, height = self.generate_obstacle_dimensions(obs_type) # generate a random obstacle
 
         # Avoid generating obstacles that overlap with the ego car.
         while True:
