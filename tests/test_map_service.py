@@ -27,7 +27,7 @@ class TestMapService(unittest.TestCase):
         for k in a:
             print(k)
 
-    def test_shortest_path_src_tgt(self):
+    def test_vel_shortest_path_src_tgt(self):
         pth = MapService.instance().get_vehicle_shortest_path_src_tgt(3302, 3314)
         self.assertEquals(len(pth), 15)
 
@@ -55,7 +55,7 @@ class TestMapService(unittest.TestCase):
 
     def test_get_bicycles_paths(self):
         print(MapService.instance().get_bicycle_shortest_path_src(316))
-        print(MapService.instance().get_shortest_path_src(316))
+        # print(MapService.instance().get_vehicle_shortest_path_src(316))
 
     def test_get_lane_successors(self):
         print(MapService.instance().find_descendants(800))

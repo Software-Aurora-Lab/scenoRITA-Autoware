@@ -18,7 +18,7 @@ class TestScenarioGenerator(unittest.TestCase):
         )
 
     def test_generate_obstacle_route(self):
-        print(self.scenario_generator.generate_obstacle_route())
+        print(self.scenario_generator.generate_obstacle_route(ObstacleType.PEDESTRIAN))
 
     def test_generate_ego_car(self):
         print(self.scenario_generator.generate_ego_car())
