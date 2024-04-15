@@ -5,7 +5,7 @@ from typing import List, Set
 
 from deap import base
 
-from apollo.map_service import PositionEstimate
+from autoware.map_service import PositionEstimate
 from autoware_auto_perception_msgs.msg import ObjectClassification
 
 
@@ -22,8 +22,9 @@ class ObstacleMotion(Enum):
 
 @dataclass(slots=True)
 class ObstaclePosition:
-    lane_id: str
+    lane_id: int
     index: int
+    s: float
 
 
 class ObstacleFitness(base.Fitness):
