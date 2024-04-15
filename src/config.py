@@ -9,14 +9,15 @@ DOWNLOAD_DIR = Path(DATA_DIR, "download")
 DOCKER_CMD = "docker"
 
 # Apollo Configurations
-APOLLO_ROOT = Path(DATA_DIR, "apollo")
-APOLLO_FLAGFILE = Path(APOLLO_ROOT, "modules", "common", "data", "global_flagfile.txt")
-APOLLO_RELEASE = "https://github.com/YuqiHuai/apollo/archive/refs/tags/v7.0.1.zip"
-APOLLO_RELEASE_NAME = "apollo-7.0.1"
-SIM_CONTROL_RELEASE = (
-    "https://github.com/YuqiHuai/sim_control_standalone/archive/refs/tags/v7.0.1.zip"
-)
-SIM_CONTROL_RELEASE_NAME = "sim_control_standalone-7.0.1"
+AUTOWARE_ROOT = Path(DATA_DIR, "autoware")
+# APOLLO_ROOT = Path(DATA_DIR, "apollo")
+# APOLLO_FLAGFILE = Path(APOLLO_ROOT, "modules", "common", "data", "global_flagfile.txt")
+# APOLLO_RELEASE = "https://github.com/YuqiHuai/apollo/archive/refs/tags/v7.0.1.zip"
+# APOLLO_RELEASE_NAME = "apollo-7.0.1"
+# SIM_CONTROL_RELEASE = (
+#     "https://github.com/YuqiHuai/sim_control_standalone/archive/refs/tags/v7.0.1.zip"
+# )
+# SIM_CONTROL_RELEASE_NAME = "sim_control_standalone-7.0.1"
 
 # Map Configurations
 MAPS_DIR = Path(DATA_DIR, "maps")
