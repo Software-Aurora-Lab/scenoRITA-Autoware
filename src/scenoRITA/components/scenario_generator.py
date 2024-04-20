@@ -155,14 +155,15 @@ class ScenarioGenerator:
             get_rounded_rand(*ObstacleConstraints[obs_type]["height"]),
         )
 
-    def generate_obstacle(self, ego_car: EgoCar) -> Obstacle:
+    def generate_obstacle(self, ego_car: EgoCar, obs_type: ObstacleType = None) -> Obstacle:
         """
         Generate an obstacle with random properties but avoid
             being initialized overlapping with the ego car.
         :param ego_car: The ego car.
+        :param obs_type: The obstacle type.
         :return: The generated obstacle.
         """
-        obs_type = self.generate_obstacle_type()
+        obs_type = self.generate_obstacle_type() if obs_type is None else obs_type
         width, length, height = self.generate_obstacle_dimensions(obs_type)  # generate a random obstacle
 
         # Avoid generating obstacles that overlap with the ego car.
