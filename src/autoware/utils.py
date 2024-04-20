@@ -7,6 +7,8 @@ from geometry_msgs.msg import Point, Quaternion
 from shapely import LineString, Polygon
 from datetime import datetime, timedelta
 
+from std_msgs.msg import Header
+
 # VEHICLE CONFIGS FOR AUTOWARE
 AUTOWARE_VEHICLE_LENGTH = 4.77
 AUTOWARE_VEHICLE_WIDTH = 1.83
@@ -46,7 +48,7 @@ def generate_adc_polygon(position: Point, theta: float):
         p = Point()
         p.x = position.x + x
         p.y = position.y + y
-        p.z = position.z
+        p.z = 0.0
         points.append(p)
     return points
 
@@ -86,7 +88,7 @@ def generate_polygon(position: Point, theta: float, length: float, width: float)
         p = Point()
         p.x = position.x + x
         p.y = position.y + y
-        p.z = position.z
+        p.z = 0.0
         points.append(p)
     return points
 
@@ -113,6 +115,11 @@ def construct_lane_boundary_linestring(lane):
 def calculate_velocity(linear_velocity: Point):
     x, y, z = linear_velocity.x, linear_velocity.y, linear_velocity.z
     return round(math.sqrt(x ** 2 + y ** 2), 2)
+
+
+def calculate_accel(accel: Point):
+    x, y, z = accel.x, accel.y, accel.z
+    return round(math.sqrt(x ** 2 + y ** 2 + z ** 2), 2)
 
 
 def quaternion_2_heading(orientation: Quaternion) -> float:
@@ -173,7 +180,7 @@ def obstacle_to_polygon(obs: PredictedObject) -> Polygon:
         p = Point()
         p.x = obs.kinematics.initial_pose_with_covariance.pose.position.x + x
         p.y = obs.kinematics.initial_pose_with_covariance.pose.position.y + y
-        p.z = obs.kinematics.initial_pose_with_covariance.pose.position.z
+        p.z = 0.0
         points.append(p)
 
     return Polygon([[x.x, x.y] for x in points])
@@ -207,3 +214,11 @@ def calculate_time_delta(time1: Time, time2: Time) -> float:
     dt2 = epoch_time_to_datetime(time2.sec, time2.nanosec)
     delta = dt2 - dt1
     return delta.total_seconds() * 1e9
+
+
+def distance(p1: Point, p2: Point):
+    return math.sqrt((p1.x - p2.x) ** 2 + (p1.y - p2.y) ** 2)
+
+
+def get_real_time_from_msg(header: Header):
+    return header.stamp.sec * 1000000000 + header.stamp.nanosec

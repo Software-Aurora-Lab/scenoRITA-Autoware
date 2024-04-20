@@ -6,20 +6,28 @@ from math import atan2
 from typing import Dict, List, Tuple, Optional, Set
 
 import lanelet2 as ll2
-from lanelet2.core import LaneletMap, Lanelet, ConstLanelet
+from lanelet2.core import LaneletMap, Lanelet
 from lanelet2.io import Origin, load
 from lanelet2.routing import RoutingGraph, LaneletPath
 from lanelet2 import traffic_rules
 from shapely import LineString
 
-from config import MAPS_DIR, SUPPORTED_MAPS
+from config import ADS_MAP_DIR, SUPPORTED_MAPS
 from lanelet2_extension_python.projection import MGRSProjector
 import lanelet2_extension_python.utility.query as query
 import lanelet2_extension_python.utility.utilities as utilities
 
-from geometry_msgs.msg import Point
+from geometry_msgs.msg import Point, Pose
 from pathlib import Path
 from autoware.utils import construct_lane_boundary_linestring, get_lane_lst, get_lane_lst_seg
+
+LOADED = False
+
+
+def load_map_service(map_name: str) -> "MapService":
+    if not LOADED:
+        MapLoader(map_name)
+    return MapService.instance()
 
 
 @dataclass
@@ -57,7 +65,7 @@ class MapLoader:
         self.lanelet_map = None
         if map_name not in SUPPORTED_MAPS:
             raise RuntimeError(f"Map {map_name} not supported")
-        self.hd_map_path = Path(MAPS_DIR, map_name, "lanelet2_map.osm")
+        self.hd_map_path = Path(ADS_MAP_DIR, map_name, "lanelet2_map.osm")
 
         if not Path.exists(self.hd_map_path):
             raise RuntimeError(f"Requested map {map_name} does not exist")
@@ -129,6 +137,8 @@ class MapService:
     veh_ln_ids: List[int] = None
     bic_ln_ids: List[int] = None
     ped_ln_ids: List[int] = None
+
+    speed_limits: Dict[int, float] = None
 
     non_junc_lns: List[int] = None
     junc_lns: List[int] = None
@@ -220,6 +230,15 @@ class MapService:
         lane = self.get_lane_by_id(lane_id)
         return construct_lane_boundary_linestring(lane)
 
+    def get_lane_boundaries(self) -> dict:
+        boundaries = dict()
+        for lane in self.ll_map.laneletLayer:
+            lane_id = lane.id
+            l, r = construct_lane_boundary_linestring(lane)
+            boundaries[f'{lane_id}_L'] = l
+            boundaries[f'{lane_id}_R'] = r
+        return boundaries
+
     def get_vehicle_shortest_path_src_tgt(self, start_lane_id: int, end_lane_id: int) -> Optional[LaneletPath]:
         return self.rg_veh.shortestPath(self.get_lane_by_id(start_lane_id),
                                         self.get_lane_by_id(end_lane_id))
@@ -283,6 +302,14 @@ class MapService:
             self.__proc_lanes()
         return self.ped_ln_ids
 
+    def get_speed_limits(self):
+        if not self.speed_limits:
+            self.speed_limits = dict()
+            vehicle_lanes = self.get_vehicle_lanes()
+            for v_lid in vehicle_lanes:
+                self.speed_limits[v_lid] = float(self.get_lane_by_id(v_lid).attributes['speed_limit'])
+        return self.speed_limits
+
     def get_lane_coord_and_heading(self, lane_id: int, s: float):
         """
         Parameters:
@@ -292,6 +319,7 @@ class MapService:
             - Point: x, y, z
             - heading: angle in radians
         """
+        from shapely.geometry import Point
         lst = self.get_center_line_lst_by_id(lane_id)
         ip = lst.interpolate(s)
 
@@ -300,10 +328,25 @@ class MapService:
         line = segments[0]
         x1, x2 = line.xy[0]
         y1, y2 = line.xy[1]
-        return Point(x=ip.x, y=ip.y, z=0.0), atan2(y2 - y1, x2 - x1)
+        return Point(ip.x, ip.y, 0.0), atan2(y2 - y1, x2 - x1)
 
-    def get_nearest_lane(self, pose):
+    def get_nearest_lane(self, pose: Pose):
         return query.getClosestLanelet(self.ll_map, pose)
+
+    def get_nearest_lanes(self, pose: Pose | Point, rng: float = 0.0):
+        if rng == 0.0:
+            return self.get_nearest_lane(pose)
+        else:
+            return query.getLaneletsWithinRange(self.ll_map.laneletLayer, pose.position, rng)
+
+    def is_in_lane(self, pose: Pose):
+        return utilities.isInLanelet(pose, self.ll_map.laneletLayer)
+
+    def get_current_lanelet(self, point: Point):
+        lanes = query.getCurrentLanelets(self.ll_map.laneletLayer, point)
+        if len(lanes) == 0:
+            return None
+        return lanes[0]
 
     # todo:
     def get_nearest_lanes_with_heading(self, point, heading):

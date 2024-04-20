@@ -1,9 +1,14 @@
 from dataclasses import dataclass
 from datetime import datetime
 from abc import ABC, abstractmethod
-from typing import Dict, Any, List
+from pathlib import Path
+from random import randint
+from typing import Dict, Any, List, Set
+
+from ruamel.yaml import YAML
 
 from scenoRITA.representation import Obstacle, ObstacleMotion, ObstacleType, EgoCar
+
 
 # todo: refactor
 @dataclass(slots=True)
@@ -335,6 +340,25 @@ class OpenScenario:
         self.map_name = map_name
         self.scenario_modifiers = scenario_modifiers
 
+    def __post_init__(self):
+        self.reassign_obs_ids()
+
+    def get_id(self) -> str:
+        return f"gen_{self.generation_id}_sce_{self.scenario_id}"
+
+    def reassign_obs_ids(self) -> bool:
+        current_ids = [obs.id for obs in self.obstacles]
+        if len(set(current_ids)) == len(current_ids):
+            # all ids are unique
+            return False
+
+        ids: Set[int] = set()
+        while len(ids) < len(self.obstacles):
+            ids.add(randint(10000, 99999))
+        for obs, oid in zip(self.obstacles, ids):
+            obs.id = oid
+        return True
+
     def get_corresponding_entity(self, obs) -> Entity:
         dim = Dimension(obs.length, obs.width, obs.height)
         if obs.type == ObstacleType.VEHICLE:
@@ -547,6 +571,14 @@ class OpenScenario:
                 ]
             }
         ]
+
+    def export_to_file(self, file_path: Path):
+        sce_pf = self.get_scenario_profile()
+        fp = open(Path(file_path, f"{self.get_id()}.yaml"), 'w+')
+        yaml = YAML()
+        yaml.default_flow_style = False
+        yaml.dump(sce_pf, fp)
+        fp.close()
 
 
 def storyboard_transform(name: str, args: Obstacle) -> Dict[str, Any]:
