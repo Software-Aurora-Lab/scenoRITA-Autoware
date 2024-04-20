@@ -16,7 +16,6 @@ from ..representation import (
     ObstacleMotion,
     ObstaclePosition,
     ObstacleType,
-    Scenario,
 )
 
 ObstacleConstraints = {
@@ -77,7 +76,7 @@ class ScenarioGenerator:
             paths = self.get_shortest_pth_filtered(obs_type, initial_lane_id)
             if len(paths) > 1:
                 chosen_path = random.choice(paths)
-                print("pth length", len(chosen_path))
+                # print("pth length", len(chosen_path))
                 initial_central_curve = self.map_service.get_center_line_lst_by_id(
                     initial_lane_id
                 )
@@ -100,8 +99,8 @@ class ScenarioGenerator:
             elif len(paths) == 1:
                 init_cc = self.map_service.get_center_line_lst_by_id(initial_lane_id)
                 xes, _ = init_cc.xy
-                final_ind = random.randint(0, len(xes))
-                return (ObstaclePosition(initial_lane_id, 0, 0.0),
+                final_ind = random.randint(1, len(xes))
+                return (ObstaclePosition(initial_lane_id, 0, 0.5),
                         ObstaclePosition(initial_lane_id, final_ind, get_s_from_start_lst(init_cc, final_ind)))
             else:
                 self.obs_avail_lids[obs_type].remove(initial_lane_id)
