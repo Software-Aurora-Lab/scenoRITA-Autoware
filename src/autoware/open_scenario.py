@@ -204,7 +204,7 @@ class Car(Vehicle):
                                     "LanePosition": {
                                         "roadId": "",
                                         "laneId": str(self.entity.final_position.lane_id),
-                                        "s": self.entity.final_position.s,
+                                        "s": self.entity.final_position.s // 1,
                                         "offset": 0,
                                         "Orientation": {
                                             "type": "relative",
@@ -480,7 +480,7 @@ class OpenScenario:
                                                                                         "roadId": "",
                                                                                         "laneId": str(
                                                                                             self.ego_car.final_position.lane_id),
-                                                                                        "s": self.ego_car.final_position.s,
+                                                                                        "s": self.ego_car.final_position.s // 1,
                                                                                         "offset": 0,
                                                                                         "Orientation": {
                                                                                             "type": "relative",
@@ -591,7 +591,7 @@ def storyboard_transform(name: str, args: Obstacle) -> Dict[str, Any]:
                         "LanePosition": {
                             "roadId": "",
                             "laneId": str(args.initial_position.lane_id),
-                            "s": args.initial_position.s,
+                            "s": round(args.initial_position.s, 3),
                             "offset": 0,
                             "Orientation": {
                                 "type": "relative",
@@ -630,7 +630,7 @@ def storyboard_transform(name: str, args: Obstacle) -> Dict[str, Any]:
                             "LanePosition": {
                                 "roadId": "",
                                 "laneId": str(args.final_position.lane_id),
-                                "s": args.final_position.s,
+                                "s": args.final_position.s // 1,
                                 "offset": 0,
                                 "Orientation": {
                                     "type": "relative",
@@ -816,7 +816,7 @@ def private_actions_transform(obj: EgoCar | Obstacle):
                             "LanePosition": {
                                 "roadId": "",
                                 "laneId": str(obj.initial_position.lane_id),
-                                "s": obj.initial_position.s,
+                                "s": round(obj.initial_position.s, 3),
                                 "offset": 0,
                                 "Orientation": {
                                     "type": "relative",
@@ -835,7 +835,7 @@ def private_actions_transform(obj: EgoCar | Obstacle):
                                 "LanePosition": {
                                     "roadId": "",
                                     "laneId": str(obj.final_position.lane_id),
-                                    "s": obj.final_position.s,
+                                    "s": obj.final_position.s // 1,
                                     "offset": 0,
                                     "Orientation": {
                                         "type": "relative",
@@ -860,7 +860,7 @@ def private_actions_transform(obj: EgoCar | Obstacle):
                         "LanePosition": {
                             "roadId": "",
                             "laneId": str(obj.initial_position.lane_id),
-                            "s": obj.initial_position.s,
+                            "s": round(obj.initial_position.s, 3),
                             "offset": 0,
                             "Orientation": {
                                 "type": "relative",
@@ -899,7 +899,7 @@ def private_actions_transform(obj: EgoCar | Obstacle):
                             "LanePosition": {
                                 "roadId": "",
                                 "laneId": str(obj.final_position.lane_id),
-                                "s": obj.final_position.s,
+                                "s": obj.final_position.s // 1,
                                 "offset": 0,
                                 "Orientation": {
                                     "type": "relative",
