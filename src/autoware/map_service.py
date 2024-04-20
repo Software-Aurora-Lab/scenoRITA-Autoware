@@ -173,7 +173,8 @@ class MapService:
         if self.__contains_participants(lane):
             for p in self.__contains_participants(lane):
                 if 'vehicle' in p:
-                    self.veh_ln_ids.append(lane.id)
+                    if lane.attributes['subtype'] != 'speed_bump':
+                        self.veh_ln_ids.append(lane.id)
                 elif 'bicycle' in p:
                     self.bic_ln_ids.append(lane.id)
                 elif 'pedestrian' in p:
