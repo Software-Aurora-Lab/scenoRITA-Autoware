@@ -6,7 +6,7 @@ from geometry_msgs.msg import Point
 
 class TestMapService(unittest.TestCase):
     def setUp(self):
-        self.map_name = "Gebze_turkey_541"
+        self.map_name = "Gebze (Turkey)"
         # self.map_name = "ces2024_demo"
         self.mapLoader = MapLoader(self.map_name)
 
@@ -47,7 +47,8 @@ class TestMapService(unittest.TestCase):
 
     def test_speed_limit(self):
         lane = MapService.instance().get_lane_by_id(8252)
-        self.assertEqual(30.00, lane.attributes['speed_limit'])
+        print(lane)
+        self.assertEqual(30.00, float(lane.attributes['speed_limit']))
 
     def test_get_pedestrian_paths(self):
         print(*MapService.instance().get_pedestrian_shortest_path_src(4112)[4112])  # this is for gebze turkey
@@ -56,6 +57,10 @@ class TestMapService(unittest.TestCase):
     def test_get_bicycles_paths(self):
         print(MapService.instance().get_bicycle_shortest_path_src(316))
         # print(MapService.instance().get_vehicle_shortest_path_src(316))
+
+    def test_get_current_lanelet(self):
+        lane = MapService.instance().get_current_lanelet(Point(x=59192.2, y=43041.8, z=0.)) # z does not matter
+        self.assertEquals(8221, lane.id)
 
     def test_get_lane_successors(self):
         print(MapService.instance().find_descendants(800))
@@ -76,7 +81,13 @@ class TestMapService(unittest.TestCase):
          3357, 3380, 3885, 458, 4014, 1629, 4055]
 
     def test_get_nearest_lanes_with_heading(self):
-        MapService.instance().get_nearest_lanes_with_heading(Point(x=3.0,y=4.0,z=0.0), 0.0)
+        MapService.instance().get_nearest_lanes_with_heading(Point(x=3.0, y=4.0, z=0.0), 0.0)
+
+    def test_get_lane_length(self):
+        print(MapService.instance().get_length_of_lane(4071))
+
+    def test_speed_bump(self):
+        assert 4196 not in MapService.instance().get_vehicle_lanes()
 
     def tearDown(self):
         del self.mapLoader

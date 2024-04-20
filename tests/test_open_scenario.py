@@ -1,10 +1,13 @@
 import os
 import unittest
+from pathlib import Path
+
 from ruamel.yaml import YAML
 from datetime import datetime
 
 from autoware.map_service import MapLoader, MapService
 from autoware.open_scenario import OpenScenario
+from autoware.scenario.validation.scenario_helper import validate
 from config import PROJECT_ROOT
 from scenoRITA.components.scenario_generator import ScenarioGenerator
 from scenoRITA.representation import ObstacleType
@@ -12,7 +15,7 @@ from scenoRITA.representation import ObstacleType
 
 class TestOpenScenario(unittest.TestCase):
     def setUp(self):
-        self.map_name = "Gebze_turkey_541"
+        self.map_name = "Gebze (Turkey)"
         if not os.path.exists(os.path.join(PROJECT_ROOT, "tests", "output", self.map_name)):
             os.makedirs(os.path.join(PROJECT_ROOT, "tests", "output", self.map_name))
         self.mapLoader = MapLoader(self.map_name)
@@ -35,7 +38,7 @@ class TestOpenScenario(unittest.TestCase):
         ego_car = self.scenario_generator.generate_ego_car()
         obs = self.scenario_generator.generate_obstacle(ego_car)
         print(obs)
-        osc = OpenScenario(ego_car, [obs], self.map_name)
+        osc = OpenScenario(1, ego_car, [obs], self.map_name)
         _obs = osc.get_corresponding_entity(obs)
         print(_obs.scenario_obj())
         print(_obs.storyboard_obj())
@@ -47,11 +50,14 @@ class TestOpenScenario(unittest.TestCase):
 
         osc = OpenScenario(0, 0, ego_car, [obs1, obs2], self.map_name)
         j = osc.get_scenario_profile()
-        fp = open(f"./output/{self.map_name}/gen_2_obs_{datetime.now().strftime('%Y_%m_%d_%H_%M_%S_%f')}.yml", 'w+')
+        file_name = f"./output/{self.map_name}/gen_2_obs_{datetime.now().strftime('%Y_%m_%d_%H_%M_%S_%f')}.yml"
+        fp = open(file_name, 'w+')
         yaml = YAML()
         yaml.default_flow_style = False
         yaml.dump(j, fp)
         fp.close()
+
+        self.validate_scenario(Path(f"./output/{self.map_name}"))
 
     def test_generate_multiple_2_obs(self):
         for i in range(10):
@@ -63,6 +69,12 @@ class TestOpenScenario(unittest.TestCase):
         for i in range(10):
             ego_car = self.scenario_generator.generate_ego_car()
             print(ego_car.initial_position)
+
+    def validate_scenario(self, scenario):
+        try:
+            validate(scenario)
+        except:
+            self.fail("Scenario validation failed")
 
     def tearDown(self):
         del self.mapLoader
