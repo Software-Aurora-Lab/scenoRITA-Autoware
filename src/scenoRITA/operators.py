@@ -5,10 +5,12 @@ from typing import List, Set
 from deap.tools import selNSGA2
 from shapely.geometry import Point
 
-from apollo.map_service import MapService
+from autoware.map_service import MapService
 
 from .components.scenario_generator import ObstacleConstraints, ScenarioGenerator
-from .representation import Obstacle, ObstacleMotion, Scenario
+from .representation import Obstacle, ObstacleMotion, ObstacleType, EgoCar
+from autoware.open_scenario import OpenScenario
+from loguru import logger
 
 
 class GeneticOperators:
@@ -35,8 +37,8 @@ class GeneticOperators:
         self.max_obs = max_obs
         self.dry_run = dry_run
 
-    def get_offsprings(self, scenarios: List[Scenario]) -> List[Scenario]:
-        result: List[Scenario] = list()
+    def get_offsprings(self, scenarios: List[OpenScenario]) -> List[OpenScenario]:
+        result: List[OpenScenario] = list()
         for scenario in scenarios:
             next_generation_id = scenario.generation_id + 1
             scenario_id = scenario.scenario_id
@@ -74,7 +76,7 @@ class GeneticOperators:
                 )
                 obs_lane = obs.initial_position.lane_id
                 obs_index = obs.initial_position.index
-                obs_xes, obs_yes = self.map_service.get_lane_central_curve_by_id(
+                obs_xes, obs_yes = self.map_service.get_center_line_lst_by_id(
                     obs_lane
                 ).xy
                 obs_point = Point(obs_xes[obs_index], obs_yes[obs_index])
@@ -90,7 +92,7 @@ class GeneticOperators:
                     f"{obs.final_position.lane_id}-{obs.final_position.index}"
                 )
                 obs_initial_lane = obs.initial_position.lane_id
-                lst = self.map_service.get_lane_central_curve_by_id(obs_initial_lane)
+                lst = self.map_service.get_center_line_lst_by_id(obs_initial_lane)
                 obs_xes, obs_yes = lst.xy
                 obs_initial_x, obs_initial_y = (
                     obs_xes[obs.initial_position.index],
@@ -118,7 +120,13 @@ class GeneticOperators:
             while len(obstacles) < obs_size:
                 obstacles.append(self.generator.generate_obstacle(ego))
 
-            result.append(Scenario(next_generation_id, scenario_id, ego, obstacles))
+            result.append(OpenScenario(
+                generation_id=next_generation_id,
+                scenario_id=scenario_id,
+                ego_car=ego,
+                obstacles=obstacles,
+                map_name=scenario.map_name
+            ))
 
         return result
 
@@ -180,7 +188,7 @@ class GeneticOperators:
         mut_index = random.randint(0, 6)
         nw, nl, nh = self.generator.generate_obstacle_dimensions(obstacle.type)
         if mut_index == 0:
-            init, final = self.generator.generate_obstacle_route()
+            init, final = self.generator.generate_obstacle_route(obstacle.type)
             obstacle.initial_position = init
             obstacle.final_position = final
         elif mut_index == 1:
@@ -199,26 +207,27 @@ class GeneticOperators:
         self._validate_obstacle(obstacle)
 
     def select(
-        self, prev_scenarios: List[Scenario], curr_scenarios: List[Scenario]
-    ) -> List[Scenario]:
+            self, prev_scenarios: List[OpenScenario], curr_scenarios: List[OpenScenario]
+    ) -> List[OpenScenario]:
         """
         For each scenario, select the best obstacles from the previous and current.
         :param prev_scenarios: Previous scenarios.
         :param curr_scenarios: Current scenarios.
         :return: scenarios for next generation.
         """
-        result: List[Scenario] = list()
+        result: List[OpenScenario] = list()
         for prev, curr in zip(prev_scenarios, curr_scenarios):
             if prev.ego_car == curr.ego_car:
                 # select obstacles
                 result.append(
-                    Scenario(
+                    OpenScenario(
                         generation_id=curr.generation_id,
                         scenario_id=curr.scenario_id,
                         ego_car=curr.ego_car,
                         obstacles=selNSGA2(
                             prev.obstacles + curr.obstacles, len(curr.obstacles), "log"
                         ),
+                        map_name=curr.map_name
                     )
                 )
             else:
