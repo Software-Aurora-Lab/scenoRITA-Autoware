@@ -1,6 +1,5 @@
 import math
 import xml.etree.ElementTree as et
-from dataclasses import dataclass
 from enum import Enum
 from math import atan2
 from typing import Dict, List, Tuple, Optional, Set
@@ -20,6 +19,7 @@ import lanelet2_extension_python.utility.utilities as utilities
 from geometry_msgs.msg import Point, Pose
 from pathlib import Path
 from autoware.utils import construct_lane_boundary_linestring, get_lane_lst, get_lane_lst_seg
+from scenoRITA.representation import ObstacleType
 
 LOADED = False
 
@@ -28,18 +28,6 @@ def load_map_service(map_name: str) -> "MapService":
     if not LOADED:
         MapLoader(map_name)
     return MapService.instance()
-
-
-@dataclass
-class SegmentInfo:
-    lane_id: int
-    segment_index: int
-
-
-@dataclass
-class PositionEstimate:
-    lane_id: int
-    s: float
 
 
 class LaneBoundary(Enum):
@@ -106,23 +94,23 @@ class MapLoader:
         return Origin(lat, lon, 0)
 
 
-def is_allowed_to_cross(boundary, left2right: bool):
-    b_type = boundary.attributes['type']
-    if b_type == LaneBoundary.LINE_THIN or b_type == LaneBoundary.LINE_THICK:
-        b_subtype = boundary['subtype']
-        if b_subtype == LaneBoundary.DASHED:
-            return True
-        if not boundary.inverted():
-            if not left2right:
-                return b_subtype == LaneBoundary.SOLID_DASHED
-            else:
-                return b_subtype == LaneBoundary.DASHED_SOLID
-        else:
-            if not left2right:
-                return b_subtype == LaneBoundary.DASHED_SOLID
-            else:
-                return b_subtype == LaneBoundary.SOLID_DASHED
-    return False
+# def is_allowed_to_cross(boundary, left2right: bool):
+#     b_type = boundary.attributes['type']
+#     if b_type == LaneBoundary.LINE_THIN or b_type == LaneBoundary.LINE_THICK:
+#         b_subtype = boundary['subtype']
+#         if b_subtype == LaneBoundary.DASHED:
+#             return True
+#         if not boundary.inverted():
+#             if not left2right:
+#                 return b_subtype == LaneBoundary.SOLID_DASHED
+#             else:
+#                 return b_subtype == LaneBoundary.DASHED_SOLID
+#         else:
+#             if not left2right:
+#                 return b_subtype == LaneBoundary.DASHED_SOLID
+#             else:
+#                 return b_subtype == LaneBoundary.SOLID_DASHED
+#     return False
 
 
 class MapService:
@@ -302,6 +290,16 @@ class MapService:
         if not self.ped_ln_ids:
             self.__proc_lanes()
         return self.ped_ln_ids
+    
+    def get_avail_lanes(self, _t: ObstacleType):
+        if _t == ObstacleType.VEHICLE:
+            return self.get_vehicle_lanes()
+        elif _t == ObstacleType.BICYCLE:
+            return self.get_bicycle_lanes()
+        elif _t == ObstacleType.PEDESTRIAN:
+            return self.get_pedestrian_lanes()
+        else:
+            raise NotImplementedError(f"Unknown obstacle type: {_t}")
 
     def get_speed_limits(self):
         if not self.speed_limits:
@@ -378,8 +376,15 @@ class MapService:
     def get_successors_for_lane(self, lane_id: int):
         return [x.id for x in self.rg_veh.following(self.ll_map.laneletLayer[lane_id])]
 
-    def find_descendants(self, lane_id: int) -> Set[int]:
-        return set([x.id for x in self.rg_veh.reachableSet(self.ll_map.laneletLayer[lane_id], 1e10)])
+    def get_reachable_descendants(self, lane_id: int, _t: ObstacleType = ObstacleType.VEHICLE) -> Set[int]:
+        if _t == ObstacleType.VEHICLE:
+            return set([x.id for x in self.rg_veh.reachableSet(self.ll_map.laneletLayer[lane_id], 1e10)])
+        elif _t == ObstacleType.BICYCLE:
+            return set([x.id for x in self.rg_bic.reachableSet(self.ll_map.laneletLayer[lane_id], 1e10)])
+        elif _t == ObstacleType.PEDESTRIAN:
+            return set([x.id for x in self.rg_ped.reachableSet(self.ll_map.laneletLayer[lane_id], 1e10)])
+        else:
+            raise NotImplementedError(f"Unknown obstacle type: {_t}")
 
     def get_length_of_lane(self, lane_id: int) -> float:
         return utilities.getLaneletLength2d(self.ll_map.laneletLayer[lane_id])
