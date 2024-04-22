@@ -4,8 +4,19 @@ from typing import List
 
 from deap import base
 
-from autoware.map_service import PositionEstimate
 from autoware_auto_perception_msgs.msg import ObjectClassification
+
+
+@dataclass
+class PositionEstimate:
+    lane_id: int
+    s: float
+
+
+@dataclass
+class SegmentInfo:
+    lane_id: int
+    segment_index: int
 
 
 class ObstacleType(Enum):
