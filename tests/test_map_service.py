@@ -6,8 +6,8 @@ from geometry_msgs.msg import Point
 
 class TestMapService(unittest.TestCase):
     def setUp(self):
-        self.map_name = "Gebze (Turkey)"
-        # self.map_name = "ces2024_demo"
+        # self.map_name = "Gebze (Turkey)"
+        self.map_name = "ces2024_demo"
         self.mapLoader = MapLoader(self.map_name)
 
     def test_find_junction_lanes(self):
@@ -34,9 +34,10 @@ class TestMapService(unittest.TestCase):
         [print(p.id) for p in pth]
 
     def test_shortest_path_src(self):
-        reachable = MapService.instance().get_shortest_path_src(3302)
-        paths = list(filter(lambda x: x is not None and len(x) > 1, reachable.values()))
-        print(paths)
+        print(*MapService.instance().get_vehicle_shortest_path_src_tgt(3238, 3264))
+        # reachable = MapService.instance().get_vehicle_shortest_path_src_tgt(3302)
+        # paths = list(filter(lambda x: x is not None and len(x) > 1, reachable.values()))
+        # print(paths)
 
     def test_single_lane(self):
         lane = MapService.instance().get_lane_by_id(8252)
@@ -63,7 +64,7 @@ class TestMapService(unittest.TestCase):
         self.assertEquals(8221, lane.id)
 
     def test_get_lane_successors(self):
-        print(MapService.instance().find_descendants(800))
+        print(MapService.instance().get_reachable_descendants(800))
         {2051, 1287, 2064, 658, 3357, 3998, 800, 2080, 2208, 677, 3752, 2218, 3885, 4014, 1966, 690, 51, 3380, 2101,
          1981, 959, 2243, 3268, 841, 458, 2123, 1996, 848, 3795, 1109, 2773, 727, 4055, 2268, 1629, 2014, 1246, 4064,
          353, 3810, 4071, 3687, 2035, 631, 3962, 1276}
@@ -88,6 +89,9 @@ class TestMapService(unittest.TestCase):
 
     def test_speed_bump(self):
         assert 4196 not in MapService.instance().get_vehicle_lanes()
+
+    def test_traffic_lights(self):
+        print(MapService.instance().get_traffic_lights(111))
 
     def tearDown(self):
         del self.mapLoader
