@@ -14,7 +14,7 @@ class TestScenarioGenerator(unittest.TestCase):
     def test_generate_obstacle_type(self):
         self.assertIn(
             self.scenario_generator.generate_obstacle_type(),
-            [ObstacleType.VEHICLE, ObstacleType.PEDESTRIAN, ObstacleType.BICYCLE]
+            [ObstacleType.CAR, ObstacleType.PEDESTRIAN, ObstacleType.BICYCLE]
         )
 
     def test_generate_obstacle_route(self):

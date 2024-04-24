@@ -13,15 +13,15 @@ from autoware.map_service import MapLoader
 
 class TestOracles(unittest.TestCase):
 
-    @pytest.fixture(autouse=True)
-    def run_before_and_after_tests(self):
-        self.dir_name = "test_created_rosbag2"
-        self.oracle_record_dir = None
-
-        yield
-
-        assert self.oracle_record_dir is not None
-        shutil.rmtree(str(self.oracle_record_dir.parent))
+    # @pytest.fixture(autouse=True)
+    # def run_before_and_after_tests(self):
+    #     self.dir_name = "test_created_rosbag2"
+    #     self.oracle_record_dir = None
+    #
+    #     yield
+    #
+    #     assert self.oracle_record_dir is not None
+    #     shutil.rmtree(str(self.oracle_record_dir.parent))
 
     def test_comfort_oracle(self):
         self.oracle_record_dir = download_and_extract_zip("1YQ76YZ0BY2wUeGmMxxXcoMRozJU8Mv-A", self.dir_name)
@@ -44,6 +44,30 @@ class TestOracles(unittest.TestCase):
         violations = analyzer.analyze()
 
         self.assertEqual(0, len(violations))
+
+    def test_collision_oracle_w_collision_2(self):
+        self.oracle_record_dir= '/home/lori/Downloads/collided_scenarios'
+
+        target_oracles = [Collision()]
+        analyzer = RecordAnalyzer(record_path=str(self.oracle_record_dir), oracles=target_oracles)
+        violations = analyzer.analyze()
+        self.assertEqual(1, len(violations))
+
+    def test_collision_oracle_w_collision_3(self):
+        self.oracle_record_dir= '/home/lori/Downloads/car_13m'
+
+        target_oracles = [Collision()]
+        analyzer = RecordAnalyzer(record_path=str(self.oracle_record_dir), oracles=target_oracles)
+        violations = analyzer.analyze()
+        self.assertEqual(1, len(violations))
+
+    def test_collision_oracle_w_collision_4(self):
+        self.oracle_record_dir = '/home/lori/Downloads/trailer_success'
+
+        target_oracles = [Collision()]
+        analyzer = RecordAnalyzer(record_path=str(self.oracle_record_dir), oracles=target_oracles)
+        violations = analyzer.analyze()
+        self.assertEqual(1, len(violations))
 
     def test_collision_oracle_wo_collision(self):
         # v = 14

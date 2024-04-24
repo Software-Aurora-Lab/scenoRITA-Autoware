@@ -23,7 +23,7 @@ class TestOpenScenario(unittest.TestCase):
         self.scenario_generator = ScenarioGenerator(self.mapService)
 
     def test_generate_veh_obstacle_route(self):
-        print(self.scenario_generator.generate_obstacle_route(ObstacleType.VEHICLE))
+        print(self.scenario_generator.generate_obstacle_route(ObstacleType.CAR))
 
     def test_generate_ped_obstacle_route(self):
         print(self.scenario_generator.generate_obstacle_route(ObstacleType.PEDESTRIAN))
@@ -38,7 +38,7 @@ class TestOpenScenario(unittest.TestCase):
         ego_car = self.scenario_generator.generate_ego_car()
         obs = self.scenario_generator.generate_obstacle(ego_car)
         print(obs)
-        osc = OpenScenario(1, ego_car, [obs], self.map_name)
+        osc = OpenScenario(1, 2, ego_car, [obs], self.map_name)
         _obs = osc.get_corresponding_entity(obs)
         print(_obs.scenario_obj())
         print(_obs.storyboard_obj())
