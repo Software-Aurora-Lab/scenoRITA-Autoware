@@ -50,7 +50,6 @@ class Collision(BasicMetric):
             self.last_perception = message
 
         if self.last_localization is None or self.last_perception is None:
-            # todo: should process or not
             return
 
         adc_pose: Pose = self.last_localization.pose.pose

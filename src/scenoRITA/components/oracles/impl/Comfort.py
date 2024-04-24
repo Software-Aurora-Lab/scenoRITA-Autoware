@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import AccelWithCovarianceStamped
 
-from autoware.map_service import MapService
 from scenoRITA.components.oracles.BasicMetric import BasicMetric
 from scenoRITA.components.oracles.Violation import Violation
 from autoware.utils import calculate_velocity, calculate_time_delta, calculate_accel
@@ -134,7 +133,3 @@ class Comfort(BasicMetric):
 
     def get_fitness(self):
         return self.fitness
-
-
-if __name__ == '__main__':
-    Comfort(MapService.instance())
