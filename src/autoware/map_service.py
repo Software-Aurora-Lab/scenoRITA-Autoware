@@ -19,7 +19,6 @@ import lanelet2_extension_python.utility.utilities as utilities
 from geometry_msgs.msg import Point, Pose
 from pathlib import Path
 from autoware.utils import construct_lane_boundary_linestring, get_lane_lst, get_lane_lst_seg
-from scenoRITA.representation import ObstacleType
 
 LOADED = False
 
@@ -291,12 +290,12 @@ class MapService:
             self.__proc_lanes()
         return self.ped_ln_ids
     
-    def get_avail_lanes(self, _t: ObstacleType):
-        if _t == ObstacleType.VEHICLE:
+    def get_avail_lanes(self, _t: str):
+        if _t == "vehicle":
             return self.get_vehicle_lanes()
-        elif _t == ObstacleType.BICYCLE:
+        elif _t == "bicycle":
             return self.get_bicycle_lanes()
-        elif _t == ObstacleType.PEDESTRIAN:
+        elif _t == "pedestrian":
             return self.get_pedestrian_lanes()
         else:
             raise NotImplementedError(f"Unknown obstacle type: {_t}")
@@ -338,10 +337,10 @@ class MapService:
         else:
             return query.getLaneletsWithinRange(self.ll_map.laneletLayer, pose.position, rng)
 
-    def is_in_lane(self, pose: Pose):
+    def is_in_lane(self, pose: Pose) -> bool:
         return utilities.isInLanelet(pose, self.ll_map.laneletLayer)
 
-    def get_current_lanelet(self, point: Point):
+    def get_current_lanelet(self, point: Point) -> Lanelet | None:
         lanes = query.getCurrentLanelets(self.ll_map.laneletLayer, point)
         if len(lanes) == 0:
             return None
@@ -370,18 +369,18 @@ class MapService:
 
         candidate_lanes.sort()
 
-    def get_predecessors_for_lane(self, lane_id: int):
+    def get_predecessors_for_lane(self, lane_id: int) -> List[int]:
         return [x.id for x in self.rg_veh.previous(self.ll_map.laneletLayer[lane_id])]
 
-    def get_successors_for_lane(self, lane_id: int):
+    def get_successors_for_lane(self, lane_id: int) -> List[int]:
         return [x.id for x in self.rg_veh.following(self.ll_map.laneletLayer[lane_id])]
 
-    def get_reachable_descendants(self, lane_id: int, _t: ObstacleType = ObstacleType.VEHICLE) -> Set[int]:
-        if _t == ObstacleType.VEHICLE:
+    def get_reachable_descendants(self, lane_id: int, _t: str = "vehicle") -> Set[int]:
+        if _t == "vehicle":
             return set([x.id for x in self.rg_veh.reachableSet(self.ll_map.laneletLayer[lane_id], 1e10)])
-        elif _t == ObstacleType.BICYCLE:
+        elif _t == "bicycle":
             return set([x.id for x in self.rg_bic.reachableSet(self.ll_map.laneletLayer[lane_id], 1e10)])
-        elif _t == ObstacleType.PEDESTRIAN:
+        elif _t == "pedestrian":
             return set([x.id for x in self.rg_ped.reachableSet(self.ll_map.laneletLayer[lane_id], 1e10)])
         else:
             raise NotImplementedError(f"Unknown obstacle type: {_t}")
