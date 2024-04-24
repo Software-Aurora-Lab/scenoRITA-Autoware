@@ -9,25 +9,25 @@ from absl import app
 from absl.flags import FLAGS
 from loguru import logger
 
-from apollo.container import ApolloContainer
-from apollo.map_service import load_map_service
-from apollo.utils import change_apollo_map, clean_apollo_logs
-from config import APOLLO_ROOT, PROJECT_NAME
+from autoware.map_service import load_map_service
+from environment.container import Container
+from config import ADS_ROOT, DOCKER_CONTAINER_NAME, DEFAULT_SCRIPT_PORT, CONTAINER_NUM, PROJECT_ROOT
 from mylib.clustering import cluster
 from mylib.workers import analysis_worker, generator_worker, player_worker
+from prepare import init_prepare
 from scenoRITA.components.grading_metrics import GradingResult
 from scenoRITA.components.scenario_generator import ScenarioGenerator
 from scenoRITA.operators import GeneticOperators
-from scenoRITA.representation import Scenario
-from utils import generate_id, get_output_dir, set_up_gflags, set_up_logging
+from autoware.open_scenario import OpenScenario
+from utils import get_output_dir, set_up_gflags, set_up_logging
 
 
 def evaluate_scenarios(
-    containers: List[ApolloContainer], scenarios: List[Scenario]
+        containers: List[Container], scenarios: List[OpenScenario]
 ) -> int:
     num_evaluated = 0
-    num_workers = 5
-    multi_process_generate = False
+    num_workers = 3
+    multi_process_generate = True
     with mp.Manager() as manager:
         # set up queues
         pending_queue = manager.Queue()
@@ -39,19 +39,13 @@ def evaluate_scenarios(
         for _ in range(num_workers):
             pending_queue.put(None)
 
-        map_service = load_map_service(FLAGS.map)
-        scenario_generator = ScenarioGenerator(map_service)
-
         # set up processes
         if multi_process_generate:
             generator_processes = [
                 threading.Thread(
                     target=generator_worker,
                     args=(
-                        scenario_generator,
                         logger,
-                        FLAGS.scenario_length,
-                        FLAGS.perception_frequency,
                         pending_queue,
                         play_queue,
                         get_output_dir(),
@@ -67,13 +61,10 @@ def evaluate_scenarios(
                 target=player_worker,
                 args=(
                     containers[x],
-                    map_service,
                     logger,
-                    FLAGS.scenario_length,
                     play_queue,
                     analysis_queue,
                     get_output_dir(),
-                    get_output_dir(Path(f"/{PROJECT_NAME}"), False),
                     FLAGS.dry_run,
                 ),
             )
@@ -83,7 +74,6 @@ def evaluate_scenarios(
             mp.Process(
                 target=analysis_worker,
                 args=(
-                    map_service,
                     logger,
                     analysis_queue,
                     result_queue,
@@ -101,15 +91,10 @@ def evaluate_scenarios(
         if not multi_process_generate:
             for scenario in scenarios:
                 target_dir = get_output_dir()
-                target_file = Path(target_dir, "input", f"{scenario.get_id()}")
+                target_file = Path(target_dir, "input", f"{scenario.get_id()}.yaml")
                 target_file.parent.mkdir(parents=True, exist_ok=True)
                 logger.info(f"{scenario.get_id()}: generate start")
-                scenario_generator.write_scenario_to_file(
-                    scenario,
-                    target_file,
-                    FLAGS.scenario_length,
-                    FLAGS.perception_frequency,
-                )
+                scenario.export_to_file(target_file)
                 logger.info(f"{scenario.get_id()}: generate end")
                 play_queue.put(scenario)
 
@@ -149,7 +134,7 @@ def evaluate_scenarios(
             for violation in results[sce_id].violations:
                 # copy record to violations folder
                 shutil.copy2(results[sce_id].record, violations_dir)
-                violation_csv = Path(violations_dir, f"{violation.type}.csv")
+                violation_csv = Path(violations_dir, f"{violation.main_type}.csv")
                 if not violation_csv.exists():
                     with open(violation_csv, "w") as f:
                         header_row = ",".join(violation.features.keys())
@@ -160,37 +145,37 @@ def evaluate_scenarios(
     return num_evaluated
 
 
-def start_containers(num_adc: int) -> List[ApolloContainer]:
-    containers = [
-        ApolloContainer(APOLLO_ROOT, f"{PROJECT_NAME}_{generate_id()}")
-        for _ in range(num_adc)
-    ]
+def start_containers() -> List[Container]:
+    containers = [Container(ADS_ROOT, PROJECT_ROOT, f'{DOCKER_CONTAINER_NAME}_{x}', str(x), DEFAULT_SCRIPT_PORT + x) for
+                  x in range(CONTAINER_NUM)]
     for ctn in containers:
-        if not FLAGS.dry_run:
-            ctn.start_container()
-            if FLAGS.dreamview:
-                ctn.start_dreamview()
-            logger.info(f"{ctn.container_name} @ {ctn.container_ip()}")
+        ctn.start_instance()
+        ctn.env_init()
+        ctn.setup_env()
     return containers
 
 
 def main(argv):
     del argv
+
+    init_prepare()
+
+    containers = start_containers()
+
     set_up_logging(FLAGS.log_level)
     logger.info("Execution ID: " + FLAGS.execution_id)
     logger.info("Map: " + FLAGS.map)
-    logger.info("Number of ADSes: " + str(FLAGS.num_adc))
     logger.info("Scenario per Generation: " + str(FLAGS.num_scenario))
     logger.info("Length of experiment: {}h", FLAGS.num_hour)
     logger.info("Obstacle Range: {} - {}", FLAGS.min_obs, FLAGS.max_obs)
 
     # change map used by Apollo
-    logger.info("Changing map to " + FLAGS.map)
-    change_apollo_map(FLAGS.map)
+    # logger.info("Changing map to " + FLAGS.map)
+    # change_apollo_map(FLAGS.map)
 
     # start up Apollo containers
-    logger.info("Starting up Apollo containers")
-    containers = start_containers(FLAGS.num_adc)
+    # logger.info("Starting up Apollo containers")
+    # containers = start_containers(FLAGS.num_adc)
 
     # loading map service
     logger.info(f"Loading map service for {FLAGS.map}")
@@ -223,7 +208,6 @@ def main(argv):
     generation_counter = 1
     failure_counter = 0
     while perf_counter() < expected_end_time:
-        clean_apollo_logs()
         logger.info(f"Generation {generation_counter}: start")
         offsprings = genetic_operators.get_offsprings(scenarios)
         logger.info(f"Generation {generation_counter}: mut/cx done")
@@ -236,8 +220,7 @@ def main(argv):
             if failure_counter >= 3:
                 logger.error(f"Generation {generation_counter}: Restarting containers.")
                 for ctn in containers:
-                    ctn.rm_container()
-                    ctn.start_container()
+                    ctn.start_instance(True)
         else:
             failure_counter = 0
         logger.info(f"Generation {generation_counter}: evaluation done")
@@ -252,15 +235,24 @@ def main(argv):
     total_hour = (perf_counter() - ga_start_time) / 3600
     logger.info(f"Total time: {total_hour:.2f}h")
 
-    logger.info("Stopping Apollo containers")
-    for ctn in containers:
-        ctn.rm_container()
+    # logger.info("Stopping Apollo containers")
+    # for ctn in containers:
+    #     ctn.stop_instance()
 
     # summarize results
-    violation_order = "CSFHU"
+    priority = {
+        "Collision": 1,
+        "Speeding": 2,
+        "Comfort": 3,
+        "UnsafeLaneChange": 4
+    }
+
+    def get_priority(event):
+        return priority.get(event, 5)
+
     csv_files = sorted(
         Path(get_output_dir(), "violations").glob("*.csv"),
-        key=lambda x: violation_order.index(x.name[0]),
+        key=lambda x: get_priority(x.name),
     )
 
     for csv_file in csv_files:
