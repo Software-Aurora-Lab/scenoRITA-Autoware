@@ -20,7 +20,10 @@ class SegmentInfo:
 
 
 class ObstacleType(Enum):
-    VEHICLE = ObjectClassification.CAR
+    CAR = ObjectClassification.CAR
+    TRUCK = ObjectClassification.TRUCK
+    BUS = ObjectClassification.BUS
+    MOTORCYCLE = ObjectClassification.MOTORCYCLE
     PEDESTRIAN = ObjectClassification.PEDESTRIAN
     BICYCLE = ObjectClassification.BICYCLE
 
