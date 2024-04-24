@@ -4,23 +4,9 @@ from pathlib import Path
 from threading import Thread
 
 from autoware.open_scenario import OpenScenario
-from config import MAX_RECORD_TIME, MY_SCRIPTS_DIR, AUTOWARE_CMD_PREPARE_TIME, ADS_RECORDS_DIR, TMP_RECORDS_DIR
+from config import MAX_RECORD_TIME, MY_SCRIPTS_DIR, AUTOWARE_CMD_PREPARE_TIME, TMP_RECORDS_DIR
 from utils import get_output_dir
 
-
-# def replay_scenario(scenario, container):
-#     container.modules_operation(operation="start")
-#     container.stop_sim_control_standalone()
-#     container.start_sim_control_standalone()
-#     container.message_handler.send_initial_localization(scenario)
-#     container.start_recorder(scenario.record_name)
-#     start_replay(scenario, container)
-#     time.sleep(MAX_RECORD_TIME)
-#     container.stop_recorder()
-#     time.sleep(2)
-#     container.kill_modules()
-#     container.connect_bridge()
-#     container.message_handler.update_bridge(container.bridge)
 
 def replay_scenarios_in_threading(scenario_list, containers):
     sub_scenario_list_list = [scenario_list[x:x + len(containers)] for x in
@@ -34,15 +20,13 @@ def replay_scenarios_in_threading(scenario_list, containers):
             thread.start()
         for thread in thread_list:
             thread.join()
-        # time.sleep(1)
 
 
 def replay_scenario(scenario: OpenScenario, container):
     container.kill_process()
     start_replay(scenario, container)
     move_scenario_record_dir(scenario, container)
-    scenario.update_scenario_record_dir_info()
-    # time.sleep(0.5)
+    # scenario.update_scenario_record_dir_info()
 
 
 def move_scenario_record_dir(scenario: OpenScenario, container):
@@ -57,9 +41,7 @@ def start_replay(scenario: OpenScenario, container):
     script_path = container.scenario_script_update(scenario)
     cmd = f"docker exec --env-file {MY_SCRIPTS_DIR}/{container.env_file} {container.container_name} /bin/bash {script_path}"
     p = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    # p.wait()
     time_start = time.time()
-    # while True:
     while p.poll() is None:
         if MAX_RECORD_TIME + AUTOWARE_CMD_PREPARE_TIME < time.time() - time_start:
             container.stop_recorder()
