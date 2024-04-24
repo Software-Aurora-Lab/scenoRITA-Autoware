@@ -1,23 +1,19 @@
 import multiprocessing as mp
 import random
-import time
 from logging import Logger
 from pathlib import Path
 from typing import Optional
 
-from apollo.container import ApolloContainer
-from apollo.map_service import MapService
+from environment.container import Container
+from autoware.open_scenario import OpenScenario
+from scenario_handling.ScenarioReplayer import replay_scenario
 from scenoRITA.components.grading_metrics import GradingResult, grade_scenario
-from scenoRITA.components.scenario_generator import ScenarioGenerator
-from scenoRITA.representation import ObstacleFitness, Scenario
+from scenoRITA.representation import ObstacleFitness
 
 
 def generator_worker(
-    generator: ScenarioGenerator,
     _logger: Logger,
-    scenario_length: int,
-    perception_frequency: int,
-    task_queue: "mp.Queue[Optional[Scenario]]",
+    task_queue: "mp.Queue[Optional[OpenScenario]]",
     result_queue: mp.Queue,
     target_dir: Path,
 ):
@@ -29,23 +25,18 @@ def generator_worker(
 
         target_file = Path(target_dir, "input", f"{scenario.get_id()}")
         target_file.parent.mkdir(parents=True, exist_ok=True)
-        generator.write_scenario_to_file(
-            scenario, target_file, scenario_length, perception_frequency
-        )
+        scenario.export_to_file(target_file)
 
         _logger.info(f"{scenario.get_id()}: generate end")
         result_queue.put(scenario)
 
 
 def player_worker(
-    container: ApolloContainer,
-    map_service: MapService,
+    container: Container,
     _logger: Logger,
-    scenario_length: int,
-    task_queue: "mp.Queue[Optional[Scenario]]",
-    result_queue: "mp.Queue[Optional[Scenario]]",
+    task_queue: "mp.Queue[Optional[OpenScenario]]",
+    result_queue: "mp.Queue[Optional[OpenScenario]]",
     target_dir: Path,
-    target_docker_dir: Path,
     dry_run: bool,
 ):
     while True:
@@ -55,40 +46,23 @@ def player_worker(
         sce_id = scenario.get_id()
         _logger.info(f"{sce_id}: play start ({container.container_name})")
 
-        target_output_path = Path(target_dir, "records", f"{sce_id}.00000")
+        target_output_path = Path(target_dir, "records", f"{sce_id}", f"{sce_id}", f"{sce_id}_0.db3")
         target_output_path.parent.mkdir(parents=True, exist_ok=True)
         if dry_run:
             with open(target_output_path, "w") as fp:
                 fp.write("dry run")
         else:
             if not container.is_running():
-                container.start_container()
-            in_docker_path = Path(target_docker_dir, "input", f"{sce_id}")
-            in_docker_output = Path(target_docker_dir, "records", f"{sce_id}")
-            container.stop_ads_modules()
-            container.stop_sim_control()
-            ego_initial = scenario.ego_car.initial_position
-            ep, et = map_service.get_lane_coord_and_heading(
-                ego_initial.lane_id, ego_initial.s
-            )
-            container.start_sim_control(ep.x, ep.y, et)
-            container.start_ads_modules()
-            container.start_recorder(str(in_docker_output))
-            container.start_replay(str(in_docker_path))
-            time.sleep(scenario_length)
-            container.stop_recorder()
-            container.stop_replay()
-            container.stop_ads_modules()
-            container.stop_sim_control()
+                container.start_instance()
+            replay_scenario(scenario, container)
 
         _logger.info(f"{sce_id}: play end")
         result_queue.put(scenario)
 
 
 def analysis_worker(
-    map_service: MapService,
     _logger: Logger,
-    task_queue: "mp.Queue[Optional[Scenario]]",
+    task_queue: "mp.Queue[Optional[OpenScenario]]",
     result_queue: "mp.Queue[GradingResult]",
     target_dir: Path,
     dry_run: bool,
@@ -100,7 +74,7 @@ def analysis_worker(
         sce_id = scenario.get_id()
         _logger.info(f"{sce_id}: analysis start")
 
-        target_input_file = Path(target_dir, "records", f"{sce_id}.00000")
+        target_input_file = list(Path(target_dir, "records", f"{sce_id}", f"{sce_id}").rglob("*.db3"))[0]
         assert target_input_file.exists()
         if dry_run:
             obs_ids = [obs.id for obs in scenario.obstacles]
@@ -119,7 +93,7 @@ def analysis_worker(
             )
         else:
             grading_result = grade_scenario(
-                scenario.get_id(), target_input_file, map_service
+                scenario.get_id(), target_input_file
             )
             if grading_result is None:
                 _logger.error(f"{sce_id}: grading failed after 3 retries.")
