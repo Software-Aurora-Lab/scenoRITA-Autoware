@@ -1,82 +1,94 @@
 import math
 import random
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Dict, Set
 
 from shapely.geometry import Point, Polygon
 
-from autoware.map_service import MapService, PositionEstimate
+from autoware.map_service import MapService
 from geometry_msgs.msg import Point
+from loguru import logger
 
 from autoware.open_scenario import OpenScenario
-from autoware.utils import generate_adc_polygon, generate_polygon, get_s_from_start_lst, get_rounded_rand
+from autoware.utils import generate_adc_polygon, generate_polygon, get_s_from_start_lst, get_rounded_rand, \
+    get_obstacle_specific_type, get_obstacle_type
 
 from ..representation import (
     EgoCar,
     Obstacle,
     ObstacleMotion,
     ObstaclePosition,
-    ObstacleType,
+    ObstacleType, PositionEstimate,
 )
 
 ObstacleConstraints = {
-    ObstacleType.VEHICLE: {
+    ObstacleType.CAR: {
         "speed": (2.0, 14.0),
-        "width": (1.5, 2.5),
-        "length": (4.0, 14.5),
-        "height": (1.5, 4.7),
+        "width": (1.8, 1.8),
+        "length": (4.0, 4.0),
+        "height": (2.5, 2.5),
+    },
+    ObstacleType.BUS: {
+        "speed": (2.0, 14.0),
+        "width": (2.5, 2.5),
+        "length": (12.0, 12.0),
+        "height": (2.5, 2.5),
+    },
+    ObstacleType.TRUCK: {
+        "speed": (2.0, 14.0),
+        "width": (2.5, 2.5),
+        "length": (8.4, 8.4),
+        "height": (2.5, 2.5),
+    },
+    ObstacleType.MOTORCYCLE: {
+        "speed": (2.0, 14.0),
+        "width": (0.8, 0.8),
+        "length": (2.2, 2.2),
+        "height": (2.5, 2.5)
     },
     ObstacleType.BICYCLE: {
         "speed": (1.6, 8.3),
-        "width": (0.5, 1.0),
-        "length": (1.0, 2.5),
-        "height": (1.0, 2.5),
+        "width": (0.8, 0.8),
+        "length": (2.0, 2.0),
+        "height": (2.5, 2.5),
     },
     ObstacleType.PEDESTRIAN: {
         "speed": (1.25, 2.9),
-        "width": (0.24, 0.67),
-        "length": (0.2, 0.45),
-        "height": (0.97, 1.87),
+        "width": (0.8, 0.8),
+        "length": (0.8, 0.8),
+        "height": (2.0, 2.0),
     },
 }
-
-
-# todo: leave or delete
-# def cut(line: LineString, distance: float):
-#     # Cuts a line in two at a distance from its starting point
-#     if distance <= 0.0 or distance >= line.length:
-#         return [LineString(line)]
-#     coords = list(line.coords)
-#     for i, p in enumerate(coords):
-#         pd = line.project(Point(p))
-#         if pd == distance:
-#             return [LineString(coords[: i + 1]), LineString(coords[i:])]
-#         if pd > distance:
-#             cp = line.interpolate(distance)
-#             return [
-#                 LineString(coords[:i] + [(cp.x, cp.y)]),
-#                 LineString([(cp.x, cp.y)] + coords[i:]),
-#             ]
-#     return [LineString(line)]
 
 
 class ScenarioGenerator:
     def __init__(self, map_service: MapService) -> None:
         self.map_service = map_service
-        self.obs_types = {ObstacleType.VEHICLE, ObstacleType.BICYCLE, ObstacleType.PEDESTRIAN}
-        self.obs_avail_lids = {_type: set(self.get_avail_lanes(_type)) for _type in self.obs_types}
+        self.obs_types = {"vehicle", "bicycle", "pedestrian"}
+        self.obs_avail_lids: Dict[str, Set[int]] = {_type: set(self.map_service.get_avail_lanes(_type)) for _type in self.obs_types}
 
-    def generate_obstacle_route(self, obs_type) -> Tuple[Optional[ObstaclePosition], Optional[ObstaclePosition]]:
+    def generate_obstacle_route(self, obs_type: ObstacleType, initial_lane_id: int = -1) -> Tuple[
+        Optional[ObstaclePosition], Optional[ObstaclePosition]]:
         while True:
-            candidate_lanes = self.get_avail_lanes(obs_type)
-            if not candidate_lanes:
-                self.obs_types.remove(obs_type)
+            _t = get_obstacle_type(obs_type)  # "vehicle" or "bicycle" or "pedestrian"
+            if _t not in self.obs_types:
+                logger.info("No available routes for obstacle type {}", obs_type)
+                if self.obs_avail_lids.__contains__(_t):
+                    del self.obs_avail_lids[_t]
                 return None, None
-            initial_lane_id = random.choice(list(self.obs_avail_lids[obs_type]))
+            candidate_lanes = self.obs_avail_lids[_t]
+            if not candidate_lanes:
+                self.obs_types.remove(_t)
+                logger.info("No available routes for obstacle type {}", _t)
+                return None, None
+
+            if initial_lane_id == -1 or initial_lane_id not in self.obs_avail_lids[_t]:
+                initial_lane_id = random.choice(list(self.obs_avail_lids[_t]))
+                if initial_lane_id not in self.obs_avail_lids[_t]:
+                    logger.info("Initial lane id is not valid, randomly choosing a new one {}", initial_lane_id)
 
             paths = self.get_shortest_pth_filtered(obs_type, initial_lane_id)
             if len(paths) > 1:
                 chosen_path = random.choice(paths)
-                # print("pth length", len(chosen_path))
                 initial_central_curve = self.map_service.get_center_line_lst_by_id(
                     initial_lane_id
                 )
@@ -103,34 +115,34 @@ class ScenarioGenerator:
                 return (ObstaclePosition(initial_lane_id, 0, 0.5),
                         ObstaclePosition(initial_lane_id, final_ind, get_s_from_start_lst(init_cc, final_ind)))
             else:
-                self.obs_avail_lids[obs_type].remove(initial_lane_id)
+                self.obs_avail_lids[_t].remove(initial_lane_id)
+                return None, None
 
     def get_shortest_pth_filtered(self, obs_type: ObstacleType, src_id: int):
-        # todo: 没有必要全部求出来了，直接用reachableSet, 挑一个出来，再单独求就好了
         pth = self.get_shortest_pth(obs_type, src_id)
-        match obs_type:
-            case ObstacleType.VEHICLE:
-                return list(filter(lambda x: x is not None and len(x) > 1, pth.values()))
-            case ObstacleType.BICYCLE:
-                return list(filter(lambda x: x is not None and len(x) > 0, pth.values()))
-            case ObstacleType.PEDESTRIAN:
-                return list(filter(lambda x: x is not None and len(x) > 0, pth.values()))
-            case _:
-                raise NotImplementedError(f"Unknown obstacle type {obs_type}")
+        if obs_type in get_obstacle_specific_type("vehicle"):
+            return list(filter(lambda x: x is not None and len(x) > 1, pth.values()))
+        elif obs_type in get_obstacle_specific_type("bicycle"):
+            return list(filter(lambda x: x is not None and len(x) > 0, pth.values()))
+        elif obs_type in get_obstacle_specific_type("pedestrian"):
+            return list(filter(lambda x: x is not None and len(x) > 0, pth.values()))
+        else:
+            raise NotImplementedError(f"Unknown obstacle type {obs_type}")
 
-    def get_shortest_pth(self, obs_type, src_id, tgt_id=None):
-        match obs_type:
-            case ObstacleType.VEHICLE:
+    def get_shortest_pth(self, obs_type: ObstacleType, src_id: int, tgt_id=None):
+        top_type = get_obstacle_type(obs_type)
+        match top_type:
+            case "vehicle":
                 if tgt_id:
                     return self.map_service.get_vehicle_shortest_path_src_tgt(src_id, tgt_id)
                 else:
                     return self.map_service.get_vehicle_shortest_path_src(src_id)
-            case ObstacleType.BICYCLE:
+            case "bicycle":
                 if tgt_id:
                     return self.map_service.get_bicycle_shortest_path_src_tgt(src_id, tgt_id)
                 else:
                     return self.map_service.get_bicycle_shortest_path_src(src_id)
-            case ObstacleType.PEDESTRIAN:
+            case "pedestrian":
                 if tgt_id:
                     return self.map_service.get_pedestrian_shortest_path_src_tgt(src_id, tgt_id)
                 else:
@@ -139,7 +151,9 @@ class ScenarioGenerator:
                 raise NotImplementedError(f"Unknown obstacle type {obs_type}")
 
     def generate_obstacle_type(self) -> ObstacleType:
-        return random.choice(list(self.obs_types))
+        top_type = random.choice(list(self.obs_types))  # choose vehicle/pedestrian/bicycle
+        specific_type = random.choice(get_obstacle_specific_type(top_type))  # choose subtype
+        return specific_type
 
     def generate_obstacle_motion(self) -> ObstacleMotion:
         return random.choice([ObstacleMotion.DYNAMIC, ObstacleMotion.STATIC])
@@ -254,7 +268,7 @@ class ScenarioGenerator:
             while True:
                 lane_id = random.choice(options)
                 lane_length = self.map_service.get_length_of_lane(lane_id)
-                descendants = self.map_service.find_descendants(lane_id)
+                descendants = self.map_service.get_reachable_descendants(lane_id)
                 if len(descendants) > 0:
                     target_lane_id = random.choice(list(descendants))
                     return EgoCar(
@@ -268,7 +282,6 @@ class ScenarioGenerator:
                     )
                 options.remove(lane_id)
 
-    # todo: check the functionality
     def generate_scenario(
             self, gen_id: int, sce_id: int, min_obs: int, max_obs: int
     ) -> OpenScenario:
@@ -303,43 +316,6 @@ class ScenarioGenerator:
                     x_es.extend(central_curve.xy[0])
                     y_es.extend(central_curve.xy[1])
         return x_es, y_es
-
-    def get_avail_lanes(self, obs_type: ObstacleType):
-        match obs_type:
-            case ObstacleType.VEHICLE:
-                return self.map_service.get_vehicle_lanes()
-            case ObstacleType.BICYCLE:
-                return self.map_service.get_bicycle_lanes()
-            case ObstacleType.PEDESTRIAN:
-                return self.map_service.get_pedestrian_lanes()
-            case _:
-                raise NotImplementedError("Unknown obstacle type")
-
-# todo:
-# def generate_traffic_light_detection_msgs(
-#     self, scenario_length: int, frequency: int, reference_time: float
-# ) -> List[TrafficLightDetection]:
-#     result: List[TrafficLightDetection] = list()
-#     dt = 1.0 / frequency
-#     current_time = 0.0
-#     sequence_num = 0
-#     while current_time < scenario_length:
-#         traffic_light_detection = TrafficLightDetection(
-#             header=Header(
-#                 timestamp_sec=reference_time + current_time,
-#                 module_name=PROJECT_NAME,
-#                 sequence_num=sequence_num,
-#             )
-#         )
-#         for signal_id in self.map_service.signal_table.keys():
-#             detection = traffic_light_detection.traffic_light.add()
-#             detection.id = signal_id
-#             detection.color = TrafficLight.GREEN
-#             detection.confidence = 1.0
-#         result.append(traffic_light_detection)
-#         current_time += dt
-#         sequence_num += 1
-#     return result
 
 # def generate_perception_obstacle(
 #     self,
