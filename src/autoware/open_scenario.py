@@ -570,38 +570,7 @@ class OpenScenario:
                 "ParameterDeclaration": []
             },
             "CatalogLocations": {
-                "CatalogLocation": [
-                    {
-                        "name": "__ego_dimensions_length__",
-                        "parameterType": "double",
-                        "value": "0"
-                    },
-                    {
-                        "name": "__ego_dimensions_width__",
-                        "parameterType": "double",
-                        "value": "0"
-                    },
-                    {
-                        "name": "__ego_dimensions_height__",
-                        "parameterType": "double",
-                        "value": "0"
-                    },
-                    {
-                        "name": "__ego_center_x__",
-                        "parameterType": "double",
-                        "value": "0"
-                    },
-                    {
-                        "name": "__ego_center_y__",
-                        "parameterType": "double",
-                        "value": "0"
-                    },
-                    {
-                        "name": "__ego_center_z__",
-                        "parameterType": "double",
-                        "value": "0"
-                    }
-                ]
+                "CatalogLocation": []
             },
             "RoadNetwork": {
                 "LogicFile": {
