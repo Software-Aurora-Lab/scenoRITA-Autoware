@@ -222,3 +222,25 @@ def distance(p1: Point, p2: Point):
 
 def get_real_time_from_msg(header: Header):
     return header.stamp.sec * 1000000000 + header.stamp.nanosec
+
+
+def get_obstacle_type(obs: ObstacleType) -> str:
+    if obs == ObstacleType.CAR or obs == ObstacleType.MOTORCYCLE or obs == ObstacleType.BUS or obs == ObstacleType.TRUCK:
+        return "vehicle"
+    elif obs == ObstacleType.PEDESTRIAN:
+        return "pedestrian"
+    elif obs == ObstacleType.BICYCLE:
+        return "bicycle"
+    else:
+        raise NotImplementedError("Obstacle type not implemented")
+
+
+def get_obstacle_specific_type(_t: str) -> list[ObstacleType]:
+    if _t == "vehicle":
+        return [ObstacleType.CAR, ObstacleType.MOTORCYCLE, ObstacleType.BUS, ObstacleType.TRUCK]
+    elif _t == "pedestrian":
+        return [ObstacleType.PEDESTRIAN]
+    elif _t == "bicycle":
+        return [ObstacleType.BICYCLE]
+    else:
+        raise NotImplementedError("Obstacle type not implemented")
