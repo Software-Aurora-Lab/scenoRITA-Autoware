@@ -608,6 +608,7 @@ class OpenScenario:
                 "ConditionGroup": []
             }
         }
+        osc['Storyboard']['Story'][0]['Act'].extend(self.obstacle_reach_stop_actions())
         osc['Storyboard']['Story'][0]['Act'][0]['ManeuverGroup'][0]['Maneuver'][0]['Event'][1]['StartTrigger'][
             'ConditionGroup'].extend(self.__generate_end_collision_condition())
         return {
@@ -789,6 +790,127 @@ class OpenScenario:
                 ]
             }
         ]
+
+    def obstacle_reach_stop_actions(self):
+        act = []
+        for i in range(len(self.obstacles)):
+            if self.obstacles[i].motion == ObstacleMotion.STATIC:
+                continue
+            obs = self.obstacle_entity[i]
+            act.append(
+                {
+                    "name": f"act_{obs.name}_stop",
+                    "ManeuverGroup": [
+                        {
+                            "maximumExecutionCount": 1,
+                            "name": f"act_{obs.name}_stop",
+                            "Actors": {
+                                "selectTriggeringEntities": False,
+                                "EntityRef": [
+                                    {
+                                        "entityRef": obs.name
+                                    }
+                                ]
+                            },
+                            "Maneuver": [
+                                {
+                                    "name": "",
+                                    "Event": [
+                                        {
+                                            "name": f"{obs.name}_goal_reached",
+                                            "priority": "parallel",
+                                            "StartTrigger": {
+                                                "ConditionGroup": [
+                                                    {
+                                                        "Condition": [
+                                                            {
+                                                                "name": "",
+                                                                "delay": 0,
+                                                                "conditionEdge": "none",
+                                                                "ByEntityCondition": {
+                                                                    "TriggeringEntities": {
+                                                                        "triggeringEntitiesRule": "any",
+                                                                        "EntityRef": [
+                                                                            {
+                                                                                "entityRef": obs.name
+                                                                            }
+                                                                        ]
+                                                                    },
+                                                                    "EntityCondition": {
+                                                                        "ReachPositionCondition": {
+                                                                            "Position": {
+                                                                                "LanePosition": {
+                                                                                    "roadId": "",
+                                                                                    "laneId": str(
+                                                                                        self.obstacles[i].final_position.lane_id),
+                                                                                    "s": self.obstacles[i].final_position.s // 1,
+                                                                                    "offset": 0,
+                                                                                    "Orientation": {
+                                                                                        "type": "relative",
+                                                                                        "h": 0,
+                                                                                        "p": -0.0,
+                                                                                        "r": 0
+                                                                                    }
+                                                                                }
+                                                                            },
+                                                                            "tolerance": 1
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                        ]
+                                                    }
+                                                ]
+                                            },
+                                            "Action": [
+                                                {
+                                                    "name": "",
+                                                    "PrivateAction": {
+                                                        "LongitudinalAction": {
+                                                            "SpeedAction": {
+                                                                "SpeedActionDynamics": {
+                                                                    "dynamicsDimension": "time",
+                                                                    "value": 0,
+                                                                    "dynamicsShape": "step"
+                                                                },
+                                                                "SpeedActionTarget": {
+                                                                    "AbsoluteTargetSpeed": {
+                                                                        "value": 0
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ],
+                    "StartTrigger": {
+                        "ConditionGroup": [
+                            {
+                                "Condition": [
+                                    {
+                                        "name": "",
+                                        "delay": 0,
+                                        "conditionEdge": "none",
+                                        "ByValueCondition": {
+                                            "SimulationTimeCondition": {
+                                                "value": 0,
+                                                "rule": "greaterThan"
+                                            }
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                }
+            )
+        return act
 
     def export_to_file(self, file_path: Path):
         sce_pf = self.get_scenario_profile()
