@@ -1,4 +1,3 @@
-import math
 import xml.etree.ElementTree as et
 from enum import Enum
 from math import atan2
@@ -91,25 +90,6 @@ class MapLoader:
         lat = float(first_node.get('lat'))
         lon = float(first_node.get('lon'))
         return Origin(lat, lon, 0)
-
-
-# def is_allowed_to_cross(boundary, left2right: bool):
-#     b_type = boundary.attributes['type']
-#     if b_type == LaneBoundary.LINE_THIN or b_type == LaneBoundary.LINE_THICK:
-#         b_subtype = boundary['subtype']
-#         if b_subtype == LaneBoundary.DASHED:
-#             return True
-#         if not boundary.inverted():
-#             if not left2right:
-#                 return b_subtype == LaneBoundary.SOLID_DASHED
-#             else:
-#                 return b_subtype == LaneBoundary.DASHED_SOLID
-#         else:
-#             if not left2right:
-#                 return b_subtype == LaneBoundary.DASHED_SOLID
-#             else:
-#                 return b_subtype == LaneBoundary.SOLID_DASHED
-#     return False
 
 
 class MapService:
@@ -227,39 +207,26 @@ class MapService:
             boundaries[f'{lane_id}_R'] = r
         return boundaries
 
-    def get_vehicle_shortest_path_src_tgt(self, start_lane_id: int, end_lane_id: int) -> Optional[LaneletPath]:
+    def get_vehicle_shortest_path_src_tgt(self, start_lane_id: int, end_lane_id: int, with_lane_change=True) -> \
+            Optional[LaneletPath]:
         return self.rg_veh.shortestPath(self.get_lane_by_id(start_lane_id),
-                                        self.get_lane_by_id(end_lane_id))
+                                        self.get_lane_by_id(end_lane_id), withLaneChanges=with_lane_change)
 
-    def get_pedestrian_shortest_path_src_tgt(self, start, end):
-        return self.rg_ped.shortestPath(self.get_lane_by_id(start), self.get_lane_by_id(end))
+    def get_pedestrian_shortest_path_src_tgt(self, start: int, end: int, with_lane_change: bool):
+        return self.rg_ped.shortestPath(self.get_lane_by_id(start), self.get_lane_by_id(end),
+                                        withLaneChanges=with_lane_change)
 
-    def get_bicycle_shortest_path_src_tgt(self, start, end):
-        return self.rg_bic.shortestPath(self.get_lane_by_id(start), self.get_lane_by_id(end))
-
-    def get_vehicle_shortest_path_src(self, start_lane_id: int) -> Dict[int, Optional[LaneletPath]]:
-        shortest_path_from_src = dict()
-        for target_lane_id in self.get_vehicle_lanes():
-            if target_lane_id != start_lane_id:
-                shortest_path_from_src[target_lane_id] = self.get_vehicle_shortest_path_src_tgt(start_lane_id,
-                                                                                                target_lane_id)
-        return shortest_path_from_src
-
-    def get_pedestrian_shortest_path_src(self, start_lane_id: int):
-        shortest_path_from_src = dict()
-        for target_lane_id in self.get_pedestrian_lanes():
-            shortest_path_from_src[target_lane_id] = (
-                self.get_pedestrian_shortest_path_src_tgt(start_lane_id, target_lane_id))
-        return shortest_path_from_src
-
-    def get_bicycle_shortest_path_src(self, start_lane_id: int):
-        shortest_path_from_src = dict()
-        for target_lane_id in self.get_bicycle_lanes():
-            shortest_path_from_src[target_lane_id] = self.get_bicycle_shortest_path_src_tgt(start_lane_id,
-                                                                                            target_lane_id)
-        return shortest_path_from_src
+    def get_bicycle_shortest_path_src_tgt(self, start: int, end: int, with_lane_change: bool):
+        return self.rg_bic.shortestPath(self.get_lane_by_id(start), self.get_lane_by_id(end),
+                                        withLaneChanges=with_lane_change)
 
     def __find_junction_lanes(self, lane):
+        if lane.attributes['subtype'] not in [LaneSubtype.ROAD.value,
+                                              LaneSubtype.HIGHWAY.value,
+                                              LaneSubtype.PLAY_STREET.value,
+                                              LaneSubtype.EXIT.value,
+                                              LaneSubtype.ROAD_SHOULDER.value]:
+            return
         if 'turn_direction' not in lane.attributes:
             self.non_junc_lns.append(lane.id)
         else:
@@ -289,7 +256,7 @@ class MapService:
         if not self.ped_ln_ids:
             self.__proc_lanes()
         return self.ped_ln_ids
-    
+
     def get_avail_lanes(self, _t: str):
         if _t == "vehicle":
             return self.get_vehicle_lanes()
@@ -328,27 +295,28 @@ class MapService:
         y1, y2 = line.xy[1]
         return Point(ip.x, ip.y, 0.0), atan2(y2 - y1, x2 - x1)
 
-    def get_nearest_lane(self, pose: Pose):
-        return query.getClosestLanelet(self.ll_map, pose)
+    def __get_closest_lane(self, pose: Pose) -> Lanelet:
+        return query.getClosestLanelet(self.ll_map.laneletLayer, pose)
 
-    def get_nearest_lanes(self, pose: Pose | Point, rng: float = 0.0):
+    def get_nearest_lanes_w_range(self, pose: Pose | Point, rng: float = 0.0) -> Lanelet | List[Lanelet]:
         if rng == 0.0:
-            return self.get_nearest_lane(pose)
+            return self.__get_closest_lane(pose)
         else:
             return query.getLaneletsWithinRange(self.ll_map.laneletLayer, pose.position, rng)
 
-    def is_in_lane(self, pose: Pose) -> bool:
-        return utilities.isInLanelet(pose, self.ll_map.laneletLayer)
+    def is_in_lane(self, pose: Pose, ll: int | Lanelet, radius=0.0) -> bool:
+        if isinstance(ll, int):
+            ll = self.get_lane_by_id(ll)
+        return utilities.isInLanelet(pose, ll, radius)
 
     def get_current_lanelet(self, point: Point) -> Lanelet | None:
         lanes = query.getCurrentLanelets(self.ll_map.laneletLayer, point)
         if len(lanes) == 0:
             return None
-        return lanes[0]
+        return lanes
 
-    # todo:
-    def get_nearest_lanes_with_heading(self, point, heading):
-        in_rng_lanes = query.getLaneletsWithinRange(self.ll_map.laneletLayer, point, 3)
+    def get_nearest_lanes_with_heading(self, pose: Pose):
+        in_rng_lanes = self.get_nearest_lanes_w_range(pose, 3)
         if len(in_rng_lanes) == 0:
             return []
 
@@ -356,18 +324,9 @@ class MapService:
         for ln in in_rng_lanes:
             if ln not in self.get_vehicle_lanes():
                 continue
-            x1, y1 = ln.centerline[0].x, ln.centerline[0].y
-            x2, y2 = ln.centerline[1].x, ln.centerline[1].y
-            theta = atan2(y2 - y1, x2 - x1)
-            theta_diff = abs(theta - heading)
-            unsigned_diff = min(theta_diff, 2 * math.pi - theta_diff)
-            if unsigned_diff < self.kMaxHeadingDiff:
+            if self.is_in_lane(pose, ln):
                 candidate_lanes.append(ln.id)
-
-        if len(candidate_lanes) == 0:
-            return []
-
-        candidate_lanes.sort()
+        return candidate_lanes
 
     def get_predecessors_for_lane(self, lane_id: int) -> List[int]:
         return [x.id for x in self.rg_veh.previous(self.ll_map.laneletLayer[lane_id])]
@@ -375,13 +334,16 @@ class MapService:
     def get_successors_for_lane(self, lane_id: int) -> List[int]:
         return [x.id for x in self.rg_veh.following(self.ll_map.laneletLayer[lane_id])]
 
-    def get_reachable_descendants(self, lane_id: int, _t: str = "vehicle") -> Set[int]:
+    def get_reachable_descendants(self, lane_id: int, _t: str = "vehicle", allow_lane_change: bool = True) -> Set[int]:
         if _t == "vehicle":
-            return set([x.id for x in self.rg_veh.reachableSet(self.ll_map.laneletLayer[lane_id], 1e10)])
+            return set([x.id for x in self.rg_veh.reachableSet(self.ll_map.laneletLayer[lane_id], 1e10,
+                                                               allowLaneChanges=allow_lane_change)])
         elif _t == "bicycle":
-            return set([x.id for x in self.rg_bic.reachableSet(self.ll_map.laneletLayer[lane_id], 1e10)])
+            return set([x.id for x in self.rg_bic.reachableSet(self.ll_map.laneletLayer[lane_id], 1e10,
+                                                               allowLaneChanges=allow_lane_change)])
         elif _t == "pedestrian":
-            return set([x.id for x in self.rg_ped.reachableSet(self.ll_map.laneletLayer[lane_id], 1e10)])
+            return set([x.id for x in self.rg_ped.reachableSet(self.ll_map.laneletLayer[lane_id], 1e10,
+                                                               allowLaneChanges=allow_lane_change)])
         else:
             raise NotImplementedError(f"Unknown obstacle type: {_t}")
 
