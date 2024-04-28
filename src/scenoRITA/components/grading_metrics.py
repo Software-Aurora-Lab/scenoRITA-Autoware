@@ -46,7 +46,8 @@ def grade_scenario(scenario_id: str, record: Path) -> Optional[GradingResult]:
                     collision_fitness[k],  # collision
                     speeding.get_fitness(),  # speeding
                     unsafe_lane_change.get_fitness(),  # unsafe lane change
-                    comfort.get_fitness(),  # fast accel & hard brake
+                    comfort.get_fitness()[0],  # fast accel
+                    comfort.get_fitness()[1]  # hard brake
                 )
 
             return GradingResult(
@@ -59,4 +60,3 @@ def grade_scenario(scenario_id: str, record: Path) -> Optional[GradingResult]:
             trial += 1
             time.sleep(1)
     return None
-
