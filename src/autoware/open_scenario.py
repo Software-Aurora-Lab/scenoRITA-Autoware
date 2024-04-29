@@ -2,13 +2,13 @@ from dataclasses import dataclass
 from datetime import datetime
 from abc import ABC, abstractmethod
 from pathlib import Path
-from random import randint
-from typing import Dict, Any, List, Set
+from typing import Dict, Any, List
 
 from ruamel.yaml import YAML
 
 from config import ADS_MAP_DIR, PROJECT_NAME
 from scenoRITA.representation import Obstacle, ObstacleMotion, ObstacleType, EgoCar
+from autoware.utils import obs_hash
 
 
 @dataclass(slots=True)
@@ -512,27 +512,40 @@ class OpenScenario:
         self.scenario_id = scenario_id
         self.ego_car = ego_car
         self.obstacles = obstacles
+        self.reassign_obs_ids()
         self.map_name = map_name
         self.scenario_modifiers = scenario_modifiers
         self.obstacle_entity = [self.get_corresponding_entity(x) for x in self.obstacles]
-
-    def __post_init__(self):
-        self.reassign_obs_ids()
 
     def get_id(self) -> str:
         return f"gen_{self.generation_id}_sce_{self.scenario_id}"
 
     def reassign_obs_ids(self) -> bool:
-        current_ids = [obs.id for obs in self.obstacles]
-        if len(set(current_ids)) == len(current_ids):
-            # all ids are unique
+        _type_cnt = {}
+        for obs in self.obstacles:
+            if not _type_cnt.__contains__(obs.type):
+                _type_cnt[obs.type] = 1
+            else:
+                _type_cnt[obs.type] += 1
+        cnt_values = set(_type_cnt.values())
+        if cnt_values == {1}:
+            for obs in self.obstacles:
+                # if there is only one obstacle in this obstacle type, no need to add additional bit
+                obs.id = obs_hash(obs.length, obs.width, obs.height)
             return False
 
-        ids: Set[int] = set()
-        while len(ids) < len(self.obstacles):
-            ids.add(randint(10000, 99999))
-        for obs, oid in zip(self.obstacles, ids):
-            obs.id = oid
+        for obs in self.obstacles:
+            cnt = _type_cnt[obs.type]
+            if cnt == 1:
+                # if there is only one obstacle in this obstacle type, no need to add additional bit
+                obs.id = obs_hash(obs.length, obs.width, obs.height)
+            else:
+                # if there are multiple ones, add 0.0(cnt) to the length / weight
+                obs.length = round(obs.length + (cnt / 100),2)
+                obs.width = round(obs.width + (cnt / 100),2)
+                obs.id = obs_hash(obs.length, obs.width, obs.height)
+            _type_cnt[obs.type] -= 1
+
         return True
 
     def get_corresponding_entity(self, obs) -> Entity:
