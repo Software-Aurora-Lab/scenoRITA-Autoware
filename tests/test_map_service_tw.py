@@ -210,7 +210,7 @@ class TestMapServiceTW(unittest.TestCase):
 
     def test_get_current_lanelet(self):
         # 625.8884, 46525.4999
-        lane = self.map_service.get_current_lanelet(Point(x=620.4646, y=46512.2191, z=0.))  # z does not matter
+        lane = self.map_service.get_current_lanelets(Point(x=620.4646, y=46512.2191, z=0.))  # z does not matter
         self.assertEquals([10251], [ll.id for ll in lane])
 
     def test_nearest_lane(self):
