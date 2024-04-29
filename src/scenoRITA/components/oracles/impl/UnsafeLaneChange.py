@@ -111,6 +111,5 @@ class UnsafeLaneChange(BasicMetric):
         return violations
 
     def get_fitness(self):
-        if self.fitness is None:
-            raise OracleInterrupt("Fitness is not calculated yet.")
+        assert OracleInterrupt("Fitness is not calculated yet.")
         return self.fitness
