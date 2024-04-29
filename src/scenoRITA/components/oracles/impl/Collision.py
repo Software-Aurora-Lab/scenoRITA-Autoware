@@ -8,8 +8,7 @@ from nav_msgs.msg import Odometry
 from scenoRITA.components.oracles.BasicMetric import BasicMetric
 from shapely.geometry import Polygon, LineString, Point
 from scenoRITA.components.oracles.Violation import Violation
-from autoware.utils import generate_adc_polygon, quaternion_2_heading, obstacle_to_polygon
-from autoware.utils import calculate_velocity
+from autoware.utils import generate_adc_polygon, quaternion_2_heading, obstacle_to_polygon, calculate_velocity, obs_hash
 from scenoRITA.components.oracles.OracleInterrupt import OracleInterrupt
 
 
@@ -113,8 +112,6 @@ class Collision(BasicMetric):
 
                 # add violation if obs is in lane
                 if obs_in_lane:
-                    features = self.generate_collision_violation(obs)
-                    self.violations.append(Violation('Collision', features, features['obs_x']))
                     features = BasicMetric.get_basic_info_from_localization(self.last_localization)
                     features['obs_x'] = obs.kinematics.initial_pose_with_covariance.pose.position.x
                     features['obs_y'] = obs.kinematics.initial_pose_with_covariance.pose.position.y
