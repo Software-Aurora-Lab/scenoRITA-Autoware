@@ -1,8 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import List
 
-from autoware_auto_perception_msgs.msg import PredictedObject
-
 from autoware.map_service import MapService
 from scenoRITA.components.oracles.MetricHelper import MetricHelper
 from autoware.utils import quaternion_2_heading
@@ -50,19 +48,6 @@ class BasicMetric(ABC):
             'y': message.pose.pose.position.y,
             'heading': heading,
             'speed': speed,
-        }
-        return features
-
-    @staticmethod
-    def get_basic_info_from_perception(message: PredictedObject):
-        heading = quaternion_2_heading(message.kinematics.initial_pose_with_covariance.pose.orientation)
-        features = {
-            'obs_x': message.kinematics.initial_pose_with_covariance.pose.position.x,
-            'obs_y': message.kinematics.initial_pose_with_covariance.pose.position.y,
-            'obs_type': message.shape.type,
-            'obs_theta': heading,
-            'obs_length': message.shape.dimensions.x,
-            'obs_width': message.shape.dimensions.y
         }
         return features
 
