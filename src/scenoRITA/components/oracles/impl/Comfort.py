@@ -29,11 +29,12 @@ class Comfort(BasicMetric):
 
     MAX_ACCL = 4.0
     MAX_DCCL = -4.0
-    TOLERANCE = 0.025
+    TOLERANCE = 0.0
     MINIMUM_DURATION = 0.0
 
     def __init__(self):
-        self.fitness = 0.0
+        super().__init__()
+        self.fitness = [0.0, 0.0]  # [max_accel, max_decel]
         self.pose_with_velocities = []
         self.accelerations = []
         self.violations = []
@@ -74,9 +75,9 @@ class Comfort(BasicMetric):
                 if isinstance(msg, AccelWithCovarianceStamped):
                     result.append((t, AutowareLocalization(pose_with_velocity=later[idx + offset][1], accl=msg)))
                 else:
-                    result.append((t, AutowareLocalization(pose_with_velocity=msg, accl=later[idx + offset][1]))) # todo: ?
+                    result.append((t, AutowareLocalization(pose_with_velocity=msg, accl=later[idx + offset][1])))
 
-        return result # todo: ?
+        return result
 
     def get_result(self):
         if len(self.pose_with_velocities) == 0 or len(self.accelerations) == 0:
@@ -91,8 +92,11 @@ class Comfort(BasicMetric):
             next_velocity = next_.get_linear_velocity()
             direction = next_velocity - prev_velocity
 
-            accel = accel_value * -1 if direction < 0 else accel_value
-            self.fitness = min(self.fitness, accel)
+            accel = accel_value * -1. if direction < 0 else accel_value
+            if direction >= 0:
+                self.fitness[0] = max(self.fitness[0], accel)
+            else:
+                self.fitness[1] = min(self.fitness[1], accel)
             features = self.get_basic_info_from_localization(next_.pose_with_velocity)
             features['accel'] = accel
             if accel > Comfort.MAX_ACCL * (1 + Comfort.TOLERANCE):
