@@ -67,9 +67,8 @@ class Collision(BasicMetric):
 
         objs = self.last_perception.objects
         for obs in objs:
-            obs_id = obs.object_id
-            obs_id_hash = hash(obs_id.uuid.tobytes())
-            if obs_id_hash in self.excluded_obs:
+            obs_id = obs_hash(obs.shape.dimensions.x, obs.shape.dimensions.y, obs.shape.dimensions.z)
+            if obs_id in self.excluded_obs:
                 continue
 
             obs_polygon = obstacle_to_polygon(obs)
@@ -80,20 +79,20 @@ class Collision(BasicMetric):
             if obs_polygon.distance(adc_rear_line_string) == 0.0:
                 if self.distance_traveled == 0.0:
                     continue
-                self.excluded_obs.add(obs_id_hash)
-                self.obs_fitness[obs_id_hash] = float("inf")
+                self.excluded_obs.add(obs_id)
+                self.obs_fitness[obs_id] = float("inf")
                 collision_detected = True
                 continue
 
             distance = adc_front_line_string.distance(obs_polygon)
-            self.obs_fitness[obs_id_hash] = min(distance, self.obs_fitness[obs_id_hash])
+            self.obs_fitness[obs_id] = min(distance, self.obs_fitness[obs_id])
 
             # front-end collision occurred (obs is in front of the ADC)
             if distance == 0.0 and calculate_velocity(self.last_localization.twist.twist.linear) > 0.000:
                 if self.distance_traveled == 0.0:
                     continue
 
-                obs_lane = self.map_service.get_nearest_lanes(self.last_localization.pose, 10)
+                obs_lane = self.map_service.get_nearest_lanes_w_range(self.last_localization.pose.pose, 10)
                 obs_in_lane = False
                 for lane in obs_lane:
                     lb, rb = self.map_service.get_lane_boundaries_by_id(lane.id)
@@ -116,9 +115,25 @@ class Collision(BasicMetric):
                 if obs_in_lane:
                     features = self.generate_collision_violation(obs)
                     self.violations.append(Violation('Collision', features, features['obs_x']))
+                    features = BasicMetric.get_basic_info_from_localization(self.last_localization)
+                    features['obs_x'] = obs.kinematics.initial_pose_with_covariance.pose.position.x
+                    features['obs_y'] = obs.kinematics.initial_pose_with_covariance.pose.position.y
+                    features['obs_heading'] = quaternion_2_heading(
+                        obs.kinematics.initial_pose_with_covariance.pose.orientation)
+                    features['obs_speed'] = calculate_velocity(
+                        obs.kinematics.initial_twist_with_covariance.twist.linear)
+                    features['obs_type'] = obs.classification[0].label
+                    features['obs_id'] = obs_id
+                    self.violations.append(
+                        Violation(
+                            'Collision',
+                            features,
+                            str(features['obs_id'])
+                        )
+                    )
                 else:
-                    self.obs_fitness[obs_id_hash] = float("inf")
-                self.excluded_obs.add(obs_id_hash)
+                    self.obs_fitness[obs_id] = float("inf")
+                self.excluded_obs.add(obs_id)
                 collision_detected = True
                 continue
 
@@ -127,21 +142,11 @@ class Collision(BasicMetric):
                 if self.distance_traveled == 0.0:
                     continue
                 collision_detected = True
-                self.obs_fitness[obs_id_hash] = float("inf")
+                self.obs_fitness[obs_id] = float("inf")
                 continue
 
         if collision_detected:
             raise OracleInterrupt()
-
-    def generate_collision_violation(self, obs: PredictedObject):
-        adc_features = BasicMetric.get_basic_info_from_localization(self.last_localization)
-        obs_features = BasicMetric.get_basic_info_from_perception(obs)
-
-        return {"ego_x": adc_features['x'],
-                "ego_y": adc_features['y'],
-                "ego_theta": adc_features['heading'],
-                "ego_speed": adc_features['speed'],
-                **obs_features}
 
     def get_result(self):
         return self.violations
