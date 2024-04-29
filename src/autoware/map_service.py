@@ -137,14 +137,15 @@ class MapService:
             self.__remove_duplicate()
 
     def __proc_lane_types(self, lane):
-        if self.__contains_participants(lane):
-            for p in self.__contains_participants(lane):
-                if 'vehicle' in p:
+        participant_exists = self.__contains_participants(lane)
+        if participant_exists:
+            for p in participant_exists:
+                if 'vehicle' in p and lane.attributes[p] == 'yes':
                     if lane.attributes['subtype'] != 'speed_bump':
                         self.veh_ln_ids.append(lane.id)
-                elif 'bicycle' in p:
+                elif 'bicycle' in p and lane.attributes[p] == 'yes':
                     self.bic_ln_ids.append(lane.id)
-                elif 'pedestrian' in p:
+                elif 'pedestrian' in p and lane.attributes[p] == 'yes':
                     self.ped_ln_ids.append(lane.id)
         else:
             self.__proc_lane(lane)
@@ -309,11 +310,19 @@ class MapService:
             ll = self.get_lane_by_id(ll)
         return utilities.isInLanelet(pose, ll, radius)
 
-    def get_current_lanelet(self, point: Point) -> Lanelet | None:
+    def get_current_lanelets(self, point: Point):
+        """
+            if the point is not in any lanelet, return None
+            else return the lanelets
+        """
         lanes = query.getCurrentLanelets(self.ll_map.laneletLayer, point)
         if len(lanes) == 0:
-            return None
-        return lanes
+            return []
+        candidate_lanes = list()
+        for lane in lanes:
+            if lane.id in self.get_vehicle_lanes():
+                candidate_lanes.append(lane)
+        return candidate_lanes
 
     def get_nearest_lanes_with_heading(self, pose: Pose):
         in_rng_lanes = self.get_nearest_lanes_w_range(pose, 3)
@@ -322,7 +331,7 @@ class MapService:
 
         candidate_lanes = list()
         for ln in in_rng_lanes:
-            if ln not in self.get_vehicle_lanes():
+            if ln.id not in self.get_vehicle_lanes():
                 continue
             if self.is_in_lane(pose, ln):
                 candidate_lanes.append(ln.id)
