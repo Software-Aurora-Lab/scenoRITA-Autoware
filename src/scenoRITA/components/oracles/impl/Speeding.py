@@ -26,10 +26,12 @@ class Speeding(BasicMetric):
         if not self.mh.has_routing_plan():
             return
 
-        current_lane = self.map_service.get_current_lanelet(ego_position)[0]
-        if current_lane is None:
+        current_lanes = self.map_service.get_current_lanelets(ego_position)
+        current_lanes.sort(key=lambda x: self.speed_limits[x.id])
+        if len(current_lanes) == 0:
             self.trace.append((False, t, -1, dict()))
         else:
+            current_lane = current_lanes[0]
             lane_speed_limit = float(current_lane.attributes['speed_limit'])
             self.obs_fitness = min(self.obs_fitness, lane_speed_limit - ego_velocity)
             if ego_velocity > lane_speed_limit * (1 + Speeding.TOLERANCE):
