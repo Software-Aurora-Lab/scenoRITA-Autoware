@@ -64,7 +64,8 @@ class ScenarioGenerator:
     def __init__(self, map_service: MapService) -> None:
         self.map_service = map_service
         self.obs_types = {"vehicle", "bicycle", "pedestrian"}
-        self.obs_avail_lids: Dict[str, Set[int]] = {_type: set(self.map_service.get_avail_lanes(_type)) for _type in self.obs_types}
+        self.obs_avail_lids: Dict[str, Set[int]] = {_type: set(self.map_service.get_avail_lanes(_type)) for _type in
+                                                    self.obs_types}
 
     def generate_obstacle_route(self, obs_type: ObstacleType, initial_lane_id: int = -1) -> Tuple[
         Optional[ObstaclePosition], Optional[ObstaclePosition]]:
@@ -86,16 +87,18 @@ class ScenarioGenerator:
                 if initial_lane_id not in self.obs_avail_lids[_t]:
                     logger.info("Initial lane id is not valid, randomly choosing a new one {}", initial_lane_id)
 
-            paths = self.get_shortest_pth_filtered(obs_type, initial_lane_id)
-            if len(paths) > 1:
-                chosen_path = random.choice(paths)
+            reachable_lanes_wo_lc = self.map_service.get_reachable_descendants(initial_lane_id,
+                                                                               _t, allow_lane_change=False)
+            reachable_lanes_wo_lc_wo_self = reachable_lanes_wo_lc - {initial_lane_id}
+
+            if len(reachable_lanes_wo_lc_wo_self) > 0:
+                final_lane_id = random.choice(list(reachable_lanes_wo_lc))
                 initial_central_curve = self.map_service.get_center_line_lst_by_id(
                     initial_lane_id
                 )
                 initial_xes, _ = initial_central_curve.xy
                 initial_index = random.randint(0, len(initial_xes) - 2)
 
-                final_lane_id = chosen_path[-1].id
                 final_central_curve = self.map_service.get_center_line_lst_by_id(
                     final_lane_id
                 )
@@ -108,45 +111,23 @@ class ScenarioGenerator:
                     ObstaclePosition(final_lane_id, final_index,
                                      get_s_from_start_lst(final_central_curve, final_index))
                 )
-            elif len(paths) == 1:
+            else:
+                # reachable_lanes_wo_lc == {initial_lane_id}
                 init_cc = self.map_service.get_center_line_lst_by_id(initial_lane_id)
                 xes, _ = init_cc.xy
-                final_ind = random.randint(1, len(xes))
+                final_ind = random.randint(1, len(xes) - 1)
                 return (ObstaclePosition(initial_lane_id, 0, 0.5),
                         ObstaclePosition(initial_lane_id, final_ind, get_s_from_start_lst(init_cc, final_ind)))
-            else:
-                self.obs_avail_lids[_t].remove(initial_lane_id)
-                return None, None
 
-    def get_shortest_pth_filtered(self, obs_type: ObstacleType, src_id: int):
-        pth = self.get_shortest_pth(obs_type, src_id)
-        if obs_type in get_obstacle_specific_type("vehicle"):
-            return list(filter(lambda x: x is not None and len(x) > 1, pth.values()))
-        elif obs_type in get_obstacle_specific_type("bicycle"):
-            return list(filter(lambda x: x is not None and len(x) > 0, pth.values()))
-        elif obs_type in get_obstacle_specific_type("pedestrian"):
-            return list(filter(lambda x: x is not None and len(x) > 0, pth.values()))
-        else:
-            raise NotImplementedError(f"Unknown obstacle type {obs_type}")
-
-    def get_shortest_pth(self, obs_type: ObstacleType, src_id: int, tgt_id=None):
+    def get_obs_shortest_pth(self, obs_type: ObstacleType, src_id: int, tgt_id: int):
         top_type = get_obstacle_type(obs_type)
         match top_type:
             case "vehicle":
-                if tgt_id:
-                    return self.map_service.get_vehicle_shortest_path_src_tgt(src_id, tgt_id)
-                else:
-                    return self.map_service.get_vehicle_shortest_path_src(src_id)
+                return self.map_service.get_vehicle_shortest_path_src_tgt(src_id, tgt_id, False)
             case "bicycle":
-                if tgt_id:
-                    return self.map_service.get_bicycle_shortest_path_src_tgt(src_id, tgt_id)
-                else:
-                    return self.map_service.get_bicycle_shortest_path_src(src_id)
+                return self.map_service.get_bicycle_shortest_path_src_tgt(src_id, tgt_id, False)
             case "pedestrian":
-                if tgt_id:
-                    return self.map_service.get_pedestrian_shortest_path_src_tgt(src_id, tgt_id)
-                else:
-                    return self.map_service.get_pedestrian_shortest_path_src(src_id)
+                return self.map_service.get_pedestrian_shortest_path_src_tgt(src_id, tgt_id, False)
             case _:
                 raise NotImplementedError(f"Unknown obstacle type {obs_type}")
 
@@ -218,7 +199,7 @@ class ScenarioGenerator:
         return result
 
     def generate_ego_car(self) -> EgoCar:
-        generate_junction_scenario = random.random() < 0.9
+        generate_junction_scenario = random.random() < 0.6
         if generate_junction_scenario:
             junction_lanes = self.map_service.get_junction_lanes()
             while True:
@@ -277,10 +258,10 @@ class ScenarioGenerator:
                         ),  # at the end of the lane
                         PositionEstimate(
                             target_lane_id,
-                            self.map_service.get_length_of_lane(lane_id),
+                            self.map_service.get_length_of_lane(target_lane_id),
                         ),
                     )
-                options.remove(lane_id)
+                options.remove(lane_id)  # if this lane cannot reach any other lane, remove it from the options
 
     def generate_scenario(
             self, gen_id: int, sce_id: int, min_obs: int, max_obs: int
@@ -298,7 +279,7 @@ class ScenarioGenerator:
     def generate_obs_reference_path(
             self, initial: ObstaclePosition, final: ObstaclePosition, obs_type: ObstacleType
     ) -> Tuple[List[float], List[float]]:
-        path = self.get_shortest_pth(obs_type, initial.lane_id, final.lane_id)
+        path = self.get_obs_shortest_pth(obs_type, initial.lane_id, final.lane_id)
         x_es = []
         y_es = []
         for lane in path:
@@ -316,154 +297,3 @@ class ScenarioGenerator:
                     x_es.extend(central_curve.xy[0])
                     y_es.extend(central_curve.xy[1])
         return x_es, y_es
-
-# def generate_perception_obstacle(
-#     self,
-#     obstacle: Obstacle,
-#     scenario_length: int,
-#     frequency: int,
-#     reference_time: float,
-# ) -> List[PerceptionObstacle]:
-#     rx, ry = self.generate_obs_reference_path(
-#         obstacle.initial_position, obstacle.final_position
-#     )
-#     reference_linestring = LineString([(x, y) for x, y in zip(rx, ry)])
-#     k_max_reference_length = obstacle.speed * scenario_length  # meters
-#     if reference_linestring.length > k_max_reference_length:
-#         the_cut = cut(reference_linestring, k_max_reference_length)
-#         rx, ry = the_cut[0].xy
-#
-#     planner_sample_distance = 0.5
-#     cx, cy, cyaw, ck, _ = cubic_spline_planner.calc_spline_course(
-#         rx, ry, ds=planner_sample_distance
-#     )
-#     state = stanley_controller.State(x=cx[0], y=cy[0], yaw=cyaw[0], v=0.0)
-#     last_idx = len(cx) - 1
-#
-#     x = [state.x]
-#     y = [state.y]
-#     yaw = [state.yaw]
-#     v = [state.v]
-#     t = [0.0]
-#     if obstacle.motion == ObstacleMotion.DYNAMIC:
-#         target_speed = [obstacle.speed for _ in range(len(cx))]
-#         for i in range(len(target_speed)):
-#             if abs(ck[i]) > 0.1:
-#                 target_speed[i] = min(target_speed[i], 4.0)
-#     else:
-#         target_speed = [0.0 for _ in range(len(cx))]
-#     L = obstacle.length
-#     target_idx, _ = stanley_controller.calc_target_index(state, cx, cy, L)
-#     dt = 1.0 / frequency
-#     current_time = 0.0
-#
-#     # while current_time < scenario_length and last_idx > target_idx:
-#     for i in range(int(scenario_length * frequency)):
-#         di, target_idx = stanley_controller.stanley_control(
-#             state, cx, cy, cyaw, target_idx, L
-#         )
-#         if target_idx == last_idx:
-#             # reached to goal, stop
-#             current_time += dt
-#             x.append(x[-1])
-#             y.append(y[-1])
-#             yaw.append(yaw[-1])
-#             v.append(0.0)
-#             t.append(current_time)
-#         else:
-#             # have not reached to goal, keep going
-#             # distance needed to decelerate to zero
-#             # v^2 = u^2 + 2as
-#             # 2as = v^2 - u^2
-#             # s = (v^2 - u^2) / 2a
-#             k_decelerate_distance = obstacle.speed**2 / (2 * 4.0)
-#             k_decelerate_index = int(
-#                 k_decelerate_distance / planner_sample_distance
-#             )
-#             if last_idx - target_idx < k_decelerate_index:
-#                 prev_v = v[-1]
-#                 target_v = round(
-#                     target_speed[target_idx]
-#                     * (last_idx - target_idx)
-#                     / k_decelerate_index,
-#                     2,
-#                 )
-#                 target_speed[target_idx] = min(prev_v, target_v)
-#             ai = stanley_controller.pid_control(target_speed[target_idx], state.v)
-#             state.update(ai, di, L, dt)
-#             current_time += dt
-#
-#             x.append(state.x)
-#             y.append(state.y)
-#             yaw.append(state.yaw)
-#             v.append(state.v)
-#             t.append(current_time)
-#
-#     obstacle_messages: List[PerceptionObstacle] = list()
-#     for i in range(len(x)):
-#         _velocity = Point3D(
-#             x=math.cos(yaw[i]) * v[i], y=math.sin(yaw[i]) * v[i], z=0.0
-#         )
-#         delta_v = v[i] - v[i - 1] if i > 0 else 0.0
-#         delta_t = t[i] - t[i - 1] if i > 0 else 0.0
-#         if delta_t == 0.0:
-#             _acceleration = Point3D(x=0, y=0, z=0)
-#         else:
-#             _acceleration = Point3D(
-#                 x=math.cos(yaw[i]) * delta_v / delta_t,
-#                 y=math.sin(yaw[i]) * delta_v / delta_t,
-#                 z=0.0,
-#             )
-#         polygon_points = [
-#             Point3D(x=p[0], y=p[1], z=0.0)
-#             for p in generate_polygon(
-#                 x[i], y[i], 0.0, yaw[i], obstacle.length, obstacle.width
-#             )
-#         ]
-#         obs_type = self.get_perception_obstacle_type(obstacle.type)
-#         obstacle_messages.append(
-#             PerceptionObstacle(
-#                 id=obstacle.id,
-#                 position=Point3D(x=x[i], y=y[i], z=0.0),
-#                 theta=yaw[i],
-#                 length=obstacle.length,
-#                 width=obstacle.width,
-#                 height=obstacle.height,
-#                 velocity=_velocity,
-#                 acceleration=_acceleration,
-#                 type=obs_type,
-#                 timestamp=reference_time + t[i],
-#                 tracking_time=1.0,
-#                 polygon_point=polygon_points,
-#             )
-#         )
-#     return obstacle_messages
-
-# def generate_perception_obstacles_msgs(
-#     self,
-#     obstacles: List[Obstacle],
-#     scenario_length: int,
-#     frequency: int,
-#     reference_time: float,
-# ) -> List[PerceptionObstacles]:
-#     obstacle_messages: List[List[PerceptionObstacle]] = list()
-#     for obs in obstacles:
-#         obstacle_messages.append(
-#             self.generate_perception_obstacle(
-#                 obs, scenario_length, frequency, reference_time
-#             )
-#         )
-#
-#     msg_length = len(obstacle_messages[0])
-#     result = list()
-#     for i in range(msg_length):
-#         new_msg = PerceptionObstacles(
-#             header=Header(
-#                 timestamp_sec=obstacle_messages[0][i].timestamp,
-#                 module_name=PROJECT_NAME,
-#                 sequence_num=i,
-#             ),
-#             perception_obstacle=[p[i] for p in obstacle_messages],
-#         )
-#         result.append(new_msg)
-#     return result
