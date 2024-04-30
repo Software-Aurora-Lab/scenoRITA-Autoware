@@ -1,3 +1,4 @@
+import shutil
 import time
 import subprocess
 from pathlib import Path
@@ -22,6 +23,12 @@ def replay_scenarios_in_threading(scenario_list, containers):
             thread.join()
 
 
+def delete_local_records(scenario: OpenScenario):
+    path = Path(get_output_dir(), "records", f"{scenario.get_id()}")
+    assert path.exists()
+    shutil.rmtree(str(path))
+
+
 def replay_scenario(scenario: OpenScenario, container):
     container.kill_process()
     start_replay(scenario, container)
@@ -32,7 +39,7 @@ def replay_scenario(scenario: OpenScenario, container):
 def move_scenario_record_dir(scenario: OpenScenario, container):
     target_output_path = Path(get_output_dir(), "records")
     target_output_path.mkdir(parents=True, exist_ok=True)
-    cmd = f"docker exec {container.container_name} mv {TMP_RECORDS_DIR}/{scenario.scenario_id} {target_output_path}/{scenario.scenario_id}"
+    cmd = f"docker exec {container.container_name} mv {TMP_RECORDS_DIR}/{scenario.get_id()} {target_output_path}"
     p = subprocess.Popen(cmd, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     p.wait()
 
