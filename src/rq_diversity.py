@@ -14,7 +14,7 @@ from loguru import logger
 from matplotlib import pyplot as plt
 
 from autoware.map_service import load_map_service
-from config import DIR_ROOT
+from config import PROJECT_ROOT
 
 mpl.rcParams["figure.dpi"] = 900
 
@@ -164,7 +164,7 @@ if __name__ == "__main__":
     # )
     custom_folder = "0430_032448_YTU Davutpasa campus"
     assert custom_folder is not None, "Please specify the custom folder"
-    ytu_path = Path(DIR_ROOT, "out", custom_folder)
+    ytu_path = Path(PROJECT_ROOT, "out", custom_folder)
 
     exp_records = [
         # ("san_francisco", avfuzzer_path, "avfuzzer"),
