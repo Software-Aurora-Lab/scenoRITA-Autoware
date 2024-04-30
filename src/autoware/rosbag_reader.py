@@ -47,8 +47,8 @@ class ROSBagReader:
     def deserialize_msg(self, data, topic_name):
         return deserialize_message(data, self.topic_msg_message[topic_name])
 
-    # def __del__(self):
-    #     self.sql_connection.close()
+    def __del__(self):
+        self.sql_connection.close()
 
     def read_specific_messages(self, topic_name: str):
         topic_data_list = []

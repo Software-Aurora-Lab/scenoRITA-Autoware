@@ -11,7 +11,6 @@ class RecordAnalyzer:
     def __init__(self, record_path: str, oracles: List[BasicMetric]) -> None:
         self.oracle_manager = MetricManager()
         self.record_path = record_path
-        self.reader = ROSBagReader(record_path)
         self.oracles = oracles
         self.register_oracles()
 
@@ -24,10 +23,7 @@ class RecordAnalyzer:
             '/localization/acceleration',
             '/localization/kinematic_state',
             '/perception/object_recognition/objects',
-            '/planning/scenario_planning/trajectory',
             '/planning/mission_planning/route',
-            '/planning/path_candidate/lane_change_left',
-            '/planning/path_candidate/lane_change_right'
         ]
 
     def analyze(self):
@@ -43,6 +39,7 @@ class RecordAnalyzer:
                 except OracleInterrupt:
                     break
         assert has_localization, "No localization in record"
+        del reader
         return self.get_results()
 
     def get_results(self):
