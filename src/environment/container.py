@@ -4,7 +4,7 @@ import subprocess
 
 from autoware.open_scenario import OpenScenario
 from config import ADS_ROOT, MY_SCRIPTS_DIR, DOCKER_CONTAINER_NAME, CONTAINER_NUM, DEFAULT_SCRIPT_PORT, PROJECT_ROOT, \
-    DIR_ROOT, DOCKER_IMAGE_ID
+    DIR_ROOT, DOCKER_IMAGE_ID, TMP_RECORDS_DIR
 from prepare import init_prepare
 from utils import get_output_dir
 
@@ -59,6 +59,10 @@ class Container:
         cmd = f"docker exec {self.container_name} /bin/bash {MY_SCRIPTS_DIR}/kill_process.sh"
         subprocess.run(cmd.split(), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
+    def remove_last_tmp_files(self):
+        cmd = f"docker exec {self.container_name} /bin/bash rm -rf {TMP_RECORDS_DIR}/*"
+        subprocess.run(cmd.split(), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
     def scenario_script_update(self, scenario: OpenScenario):
         script_path = f"{MY_SCRIPTS_DIR}/run_scenario_{self.ctn_id}.sh"
 
@@ -84,6 +88,7 @@ class Container:
                 forcing container to restart
         """
         if not restart and self.is_running():
+            self.remove_last_tmp_files()
             return
 
         cmd = f'docker network create --driver bridge c{self.ctn_id}'
