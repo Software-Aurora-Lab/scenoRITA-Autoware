@@ -22,7 +22,7 @@ class InitRunner:
         with open(f"{PRE_SCRIPTS_DIR}/{file_name}", "r") as f:
             lines = f.read()
         with open(f"{PRE_SCRIPTS_DIR}/{file_name}", "w") as f:
-            f.write(lines.replace("/home/cloudsky", DIR_ROOT))
+            f.write(lines.replace("/home/lori/Desktop", DIR_ROOT))
 
 
 if __name__ == '__main__':
