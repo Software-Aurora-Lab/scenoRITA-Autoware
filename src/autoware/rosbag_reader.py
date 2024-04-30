@@ -13,7 +13,6 @@ class ROSBagReader:
         self.bag_dir_path = bag_dir_path
 
         db3_path = self.get_file_path("db3")
-        # metadata_path = self.first_file(directory=bag_dir_path, extension="yaml")
 
         self.sql_connection = sqlite3.connect(db3_path)
         self.sql_cursor = self.sql_connection.cursor()
@@ -48,8 +47,8 @@ class ROSBagReader:
     def deserialize_msg(self, data, topic_name):
         return deserialize_message(data, self.topic_msg_message[topic_name])
 
-    def __del__(self):
-        self.sql_connection.close()
+    # def __del__(self):
+    #     self.sql_connection.close()
 
     def read_specific_messages(self, topic_name: str):
         topic_data_list = []
