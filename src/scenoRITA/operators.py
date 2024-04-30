@@ -194,7 +194,7 @@ class GeneticOperators:
                 keep = True
         else:
             # both are in the available lanes, check if the final position is reachable from initial position
-            reachable_descendants = self.map_service.get_reachable_descendants(obstacle.initial_position.lane_id, _t)
+            reachable_descendants = self.map_service.get_reachable_descendants(obstacle.initial_position.lane_id, _t, False)  # obstacle does not change the lanes
             if obstacle.final_position.lane_id not in reachable_descendants:
                 logger.info("Final position is not reachable from initial position, generating new route for obstacle: " + str(
                     obstacle.id))
@@ -240,8 +240,8 @@ class GeneticOperators:
         if cx_index < 7:
             lhs.motion, rhs.motion = rhs.motion, lhs.motion
 
-        self._validate_obstacle(lhs)
-        self._validate_obstacle(rhs)
+        self._validate_obstacle(lhs)  # reset the obstacle size and speed based on the obstacle type
+        self._validate_obstacle(rhs)  # reset the obstacle size and speed based on the obstacle type
 
     def mutate(self, obstacle: Obstacle) -> None:
         """
