@@ -1,7 +1,7 @@
 from collections import defaultdict
-from typing import List, Optional, Tuple, Dict
+from typing import Optional, Dict
 
-from autoware_auto_perception_msgs.msg import PredictedObjects, PredictedObject
+from autoware_auto_perception_msgs.msg import PredictedObjects
 from geometry_msgs.msg import Pose
 from nav_msgs.msg import Odometry
 
@@ -15,7 +15,6 @@ from scenoRITA.components.oracles.OracleInterrupt import OracleInterrupt
 class Collision(BasicMetric):
     last_localization: Optional[Odometry]
     last_perception: Optional[PredictedObjects]
-    distances: List[Tuple[float, int, str]]
 
     def __init__(self):
         super().__init__()

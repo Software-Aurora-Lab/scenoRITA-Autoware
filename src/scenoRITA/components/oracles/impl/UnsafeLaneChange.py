@@ -8,9 +8,6 @@ from autoware.utils import generate_adc_polygon, quaternion_2_heading, get_real_
 from functools import wraps
 import time
 
-from scenoRITA.components.oracles.OracleInterrupt import OracleInterrupt
-
-
 def timeit(func):
     @wraps(func)
     def timeit_wrapper(*args, **kwargs):
@@ -111,5 +108,4 @@ class UnsafeLaneChange(BasicMetric):
         return violations
 
     def get_fitness(self):
-        assert OracleInterrupt("Fitness is not calculated yet.")
         return self.fitness
