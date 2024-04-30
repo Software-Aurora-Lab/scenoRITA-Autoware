@@ -19,6 +19,7 @@ from scenoRITA.components.grading_metrics import GradingResult
 from scenoRITA.components.scenario_generator import ScenarioGenerator
 from scenoRITA.operators import GeneticOperators
 from autoware.open_scenario import OpenScenario
+from scenoRITA.representation import ObstacleFitness
 from utils import get_output_dir, set_up_gflags, set_up_logging
 
 
@@ -26,7 +27,7 @@ def evaluate_scenarios(
         containers: List[Container], scenarios: List[OpenScenario]
 ) -> int:
     num_evaluated = 0
-    num_workers = 3
+    num_workers = 5
     multi_process_generate = True
     with mp.Manager() as manager:
         # set up queues
@@ -91,7 +92,7 @@ def evaluate_scenarios(
         if not multi_process_generate:
             for scenario in scenarios:
                 target_dir = get_output_dir()
-                target_file = Path(target_dir, "input", f"{scenario.get_id()}.yaml")
+                target_file = Path(target_dir, "input")
                 target_file.parent.mkdir(parents=True, exist_ok=True)
                 logger.info(f"{scenario.get_id()}: generate start")
                 scenario.export_to_file(target_file)
@@ -125,7 +126,10 @@ def evaluate_scenarios(
             num_evaluated += 1
             grading_result = results[scenario.get_id()]
             for obs in scenario.obstacles:
-                obs.fitness.values = grading_result.fitnesses[obs.id]
+                if grading_result.fitnesses.__contains__(obs.id):
+                    obs.fitness.values = grading_result.fitnesses[obs.id]
+                else:
+                    obs.fitness.values = ObstacleFitness.get_fallback_fitness()
 
         # copy records with violations to a separate folder
         for sce_id in results:
@@ -169,18 +173,9 @@ def main(argv):
     logger.info("Length of experiment: {}h", FLAGS.num_hour)
     logger.info("Obstacle Range: {} - {}", FLAGS.min_obs, FLAGS.max_obs)
 
-    # change map used by Apollo
-    # logger.info("Changing map to " + FLAGS.map)
-    # change_apollo_map(FLAGS.map)
-
-    # start up Apollo containers
-    # logger.info("Starting up Apollo containers")
-    # containers = start_containers(FLAGS.num_adc)
-
     # loading map service
     logger.info(f"Loading map service for {FLAGS.map}")
     map_service = load_map_service(FLAGS.map)
-    logger.info("Map service loaded")
 
     # genetic algorithm main loop
     scenario_generator = ScenarioGenerator(map_service)
@@ -234,10 +229,6 @@ def main(argv):
 
     total_hour = (perf_counter() - ga_start_time) / 3600
     logger.info(f"Total time: {total_hour:.2f}h")
-
-    # logger.info("Stopping Apollo containers")
-    # for ctn in containers:
-    #     ctn.stop_instance()
 
     # summarize results
     priority = {
