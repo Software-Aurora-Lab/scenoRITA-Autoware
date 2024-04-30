@@ -1,4 +1,6 @@
 data/*
+!data/config_files
+!data/scripts
 out/*
 data/download/*
 !data/download/.gitkeep
