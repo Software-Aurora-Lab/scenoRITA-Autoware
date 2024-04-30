@@ -1,2 +1,0 @@
-class OracleInterrupt(Exception):
-    pass
