@@ -6,7 +6,7 @@ from typing import Optional
 
 from environment.container import Container
 from autoware.open_scenario import OpenScenario
-from scenario_handling.ScenarioReplayer import replay_scenario
+from scenario_handling.ScenarioReplayer import replay_scenario, delete_local_records
 from scenoRITA.components.grading_metrics import GradingResult, grade_scenario
 from scenoRITA.representation import ObstacleFitness
 
@@ -23,7 +23,7 @@ def generator_worker(
             break
         _logger.info(f"{scenario.get_id()}: generate start")
 
-        target_file = Path(target_dir, "input", f"{scenario.get_id()}")
+        target_file = Path(target_dir, "input")
         target_file.parent.mkdir(parents=True, exist_ok=True)
         scenario.export_to_file(target_file)
 
@@ -46,9 +46,9 @@ def player_worker(
         sce_id = scenario.get_id()
         _logger.info(f"{sce_id}: play start ({container.container_name})")
 
-        target_output_path = Path(target_dir, "records", f"{sce_id}", f"{sce_id}", f"{sce_id}_0.db3")
-        target_output_path.parent.mkdir(parents=True, exist_ok=True)
         if dry_run:
+            target_output_path = Path(target_dir, "records", f"{sce_id}", f"{sce_id}", f"{sce_id}_0.db3")
+            target_output_path.parent.mkdir(parents=True, exist_ok=True)
             with open(target_output_path, "w") as fp:
                 fp.write("dry run")
         else:
@@ -74,7 +74,7 @@ def analysis_worker(
         sce_id = scenario.get_id()
         _logger.info(f"{sce_id}: analysis start")
 
-        target_input_file = list(Path(target_dir, "records", f"{sce_id}", f"{sce_id}").rglob("*.db3"))[0]
+        target_input_file = Path(target_dir, "records", f"{sce_id}", f"{sce_id}")
         assert target_input_file.exists()
         if dry_run:
             obs_ids = [obs.id for obs in scenario.obstacles]
@@ -106,4 +106,5 @@ def analysis_worker(
             else:
                 result_queue.put(grading_result)
 
+            delete_local_records(scenario)
         _logger.info(f"{sce_id}: analysis end")
