@@ -39,6 +39,9 @@ def grade_scenario(scenario_id: str, record: Path) -> Optional[GradingResult]:
             violations = record_file.analyze()
             collision, speeding, unsafe_lane_change, comfort = metrics
 
+            comfort_fitness = comfort.get_fitness()
+            if comfort_fitness is None:
+                return None
             collision_fitness = collision.get_fitness()
             fitness: Dict[int, Tuple[float, ...]] = dict()
             for k in collision_fitness:
@@ -46,8 +49,8 @@ def grade_scenario(scenario_id: str, record: Path) -> Optional[GradingResult]:
                     collision_fitness[k],  # collision
                     speeding.get_fitness(),  # speeding
                     unsafe_lane_change.get_fitness(),  # unsafe lane change
-                    comfort.get_fitness()[0],  # fast accel
-                    comfort.get_fitness()[1]  # hard brake
+                    comfort_fitness[0],  # fast accel
+                    comfort_fitness[1]  # hard brake
                 )
 
             return GradingResult(
