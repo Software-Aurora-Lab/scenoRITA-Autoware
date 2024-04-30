@@ -32,7 +32,7 @@ def replay_scenario(scenario: OpenScenario, container):
 def move_scenario_record_dir(scenario: OpenScenario, container):
     target_output_path = Path(get_output_dir(), "records")
     target_output_path.mkdir(parents=True, exist_ok=True)
-    cmd = f"docker exec {container.container_name} mv {TMP_RECORDS_DIR}/{scenario.get_id()} {target_output_path}"
+    cmd = f'docker exec {container.container_name} mv {TMP_RECORDS_DIR}/{scenario.get_id()} "{target_output_path}"'
     p = subprocess.Popen(cmd, shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     p.wait()
 
