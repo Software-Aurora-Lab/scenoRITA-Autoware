@@ -1,2 +1,2 @@
 #!/bin/bash
-env > /home/lori/Desktop/autoware/scripts/dev.env
+env > /home/sora/autoware/scripts/dev.env

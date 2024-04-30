@@ -1,6 +1,6 @@
 #!/bin/bash
 
-cd /home/lori/Desktop/autoware
+cd /home/sora/autoware
 
 sudo apt update
 

@@ -1,2 +1,2 @@
 #!/bin/bash
-cp -rf /home/lori/Desktop/autoware/scripts/.bashrc ~/.bashrc
+cp -rf /home/sora/autoware/scripts/.bashrc ~/.bashrc

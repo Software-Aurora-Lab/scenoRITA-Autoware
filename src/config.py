@@ -19,7 +19,6 @@ AV_TESTING_APPROACH = "AutowareScenarios"  # AutowareScenarios
 DOCKER_CONTAINER_NAME = "scenoRITA_autoware"
 MAX_RECORD_TIME = 60  # 10/30/50
 AUTOWARE_CMD_PREPARE_TIME = 25
-TIME_HOUR_THRESHOLD = 10  # hours  # todo:
 DEFAULT_SCRIPT_PORT = 5555
 CONTAINER_NUM = 3  # 3/4/5  # todo:
 DOCKER_IMAGE_ID = "5d3ce2be2fc7"  # todo:
@@ -30,7 +29,7 @@ PROJECT_ROOT = str(Path(__file__).parent.parent)
 FEATURES_CSV_DIR = f'{PROJECT_ROOT}/data/violation_features'
 
 ADS_ROOT = f'{DIR_ROOT}/autoware'
-ADS_MAP_DIR = f'{DIR_ROOT}/autoware_maps' # todo: change to f'{DIR_ROOT}/autoware_map/autoware_scenario_data/maps'
+ADS_MAP_DIR = f'{DIR_ROOT}/autoware_map/autoware_scenario_data/maps' # todo: change to f'{DIR_ROOT}/autoware_map/autoware_scenario_data/maps'
 SUPPORTED_MAPS = list(x.name for x in Path(ADS_MAP_DIR).iterdir() if x.is_dir())
 ADS_SCENARIO_DIR = f'{PROJECT_ROOT}/out'
 ADS_TEMP_SCENARIO_DIR = f'{PROJECT_ROOT}/out/temp_scenarios'

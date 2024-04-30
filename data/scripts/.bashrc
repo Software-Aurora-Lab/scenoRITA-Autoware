@@ -97,5 +97,5 @@ fi
 export RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
 export RCUTILS_COLORIZED_OUTPUT=1
 export RCUTILS_CONSOLE_OUTPUT_FORMAT="[{severity} {time}] [{name}]: {message} ({function_name}() at {file_name}:{line_number})"
-export CYCLONEDDS_URI=/home/lori/Desktop/autoware/scripts/cyclonedds_config.xml
+export CYCLONEDDS_URI=/home/sora/autoware/scripts/cyclonedds_config.xml
 export ROS_LOCALHOST_ONLY=1
