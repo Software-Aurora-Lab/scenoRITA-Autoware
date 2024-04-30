@@ -70,6 +70,7 @@ def generator_adapter(generator):
     for g in generator:
         yield g.parent
 
+
 def plot_experiment_heatmap(map_name: str, record_root: Path, output_path: Path):
     plt.cla()
     plt.clf()
@@ -182,7 +183,7 @@ if __name__ == "__main__":
             start = time.perf_counter()
             logger.info(f"Plotting {map_name} {approach_name}")
             plot_experiment_heatmap(
-                map_name, Path(record_root), Path(f"{map_name}_{approach_name}.png")
+                map_name, Path(record_root), Path(record_root, f"{map_name}_{approach_name}.png")
             )
             minutes = (time.perf_counter() - start) / 60
             logger.info(f"Finished {map_name} {approach_name} in {minutes:.2f} minutes")
