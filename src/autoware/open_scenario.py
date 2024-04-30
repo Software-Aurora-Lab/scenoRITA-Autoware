@@ -18,6 +18,16 @@ class Dimension:
     height: float
 
 
+OriginalDim = {
+    ObstacleType.CAR: Dimension(4.0, 1.8, 2.5),
+    ObstacleType.BUS: Dimension(12.0, 2.5, 2.5),
+    ObstacleType.TRUCK: Dimension(8.4, 2.5, 2.5),
+    ObstacleType.MOTORCYCLE: Dimension(2.2, 0.8, 2.5),
+    ObstacleType.BICYCLE: Dimension(2.0, 0.8, 2.5),
+    ObstacleType.PEDESTRIAN: Dimension(0.8, 0.8, 2.0)
+}
+
+
 class Entity(ABC):
     name: str
 
@@ -531,18 +541,22 @@ class OpenScenario:
         if cnt_values == {1}:
             for obs in self.obstacles:
                 # if there is only one obstacle in this obstacle type, no need to add additional bit
-                obs.id = obs_hash(obs.length, obs.width, obs.height)
+                original_length = OriginalDim[obs.type].length
+                original_width = OriginalDim[obs.type].width
+                obs.id = obs_hash(original_length, original_width, obs.height)
             return False
 
         for obs in self.obstacles:
             cnt = _type_cnt[obs.type]
+            original_length = OriginalDim[obs.type].length
+            original_width = OriginalDim[obs.type].width
             if cnt == 1:
                 # if there is only one obstacle in this obstacle type, no need to add additional bit
-                obs.id = obs_hash(obs.length, obs.width, obs.height)
+                obs.id = obs_hash(original_length, original_width, obs.height)
             else:
                 # if there are multiple ones, add 0.0(cnt) to the length / weight
-                obs.length = round(obs.length + (cnt / 100),2)
-                obs.width = round(obs.width + (cnt / 100),2)
+                obs.length = round(original_length + ((cnt - 1) / 100), 2)
+                obs.width = round(original_width + ((cnt - 1) / 100), 2)
                 obs.id = obs_hash(obs.length, obs.width, obs.height)
             _type_cnt[obs.type] -= 1
 
@@ -855,8 +869,10 @@ class OpenScenario:
                                                                                 "LanePosition": {
                                                                                     "roadId": "",
                                                                                     "laneId": str(
-                                                                                        self.obstacles[i].final_position.lane_id),
-                                                                                    "s": self.obstacles[i].final_position.s // 1,
+                                                                                        self.obstacles[
+                                                                                            i].final_position.lane_id),
+                                                                                    "s": self.obstacles[
+                                                                                             i].final_position.s // 1,
                                                                                     "offset": 0,
                                                                                     "Orientation": {
                                                                                         "type": "relative",
