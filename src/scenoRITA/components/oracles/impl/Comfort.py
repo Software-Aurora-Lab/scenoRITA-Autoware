@@ -34,7 +34,7 @@ class Comfort(BasicMetric):
 
     def __init__(self):
         super().__init__()
-        self.fitness = [0.0, 0.0]  # [max_accel, max_decel]
+        self.fitness = None  # [max_accel, max_decel]
         self.pose_with_velocities = []
         self.accelerations = []
         self.violations = []
@@ -80,6 +80,7 @@ class Comfort(BasicMetric):
         return result
 
     def get_result(self):
+        self.fitness = [0.0, 0.0]
         if len(self.pose_with_velocities) == 0 or len(self.accelerations) == 0:
             return []
 
