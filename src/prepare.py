@@ -16,7 +16,7 @@ def scripts_preprocessing(file_name):
     with open(f"{PRE_SCRIPTS_DIR}/{file_name}", "r") as f:
         lines = f.read()
     with open(f"{PRE_SCRIPTS_DIR}/{file_name}", "w") as f:
-        f.write(lines.replace("/home/cloudsky", DIR_ROOT))
+        f.write(lines.replace(f"/home/lori/Desktop", DIR_ROOT))
 
 
 def move_launch_file():

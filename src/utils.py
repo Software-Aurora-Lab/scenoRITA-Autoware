@@ -18,21 +18,17 @@ def generate_id(size=5):
 
 def set_up_gflags():
     # Execution flags
-    flags.DEFINE_string("map", "borregas_ave", "Name of the map to use.")
-    flags.DEFINE_integer("num_adc", 5, "Number of ADCs to use.")
+    flags.DEFINE_string("map", "Gebze (Turkey)", "Name of the map to use.")  # todo:
     flags.DEFINE_boolean("dry_run", os.uname()[0] != "Linux", "Dry run mode.")
-    flags.DEFINE_boolean("dreamview", False, "Enable Dreamview.")
     flags.DEFINE_string(
         "execution_id", datetime.now().strftime(r"%m%d_%H%M%S"), "Execution ID."
     )
-    flags.DEFINE_integer("perception_frequency", 10, "Perception frequency.")
-    flags.DEFINE_integer("scenario_length", 30, "Length of the scenario in seconds.")
     flags.DEFINE_boolean("colorize", True, "Colorize log output.")
     flags.DEFINE_string("log_level", "INFO", "Log level.")
 
     # Genetic algorithm flags
-    flags.DEFINE_integer("num_scenario", 20, "Number of scenarios to generate.")
-    flags.DEFINE_float("num_hour", 12.0, "Number of hours to generate scenarios for.")
+    flags.DEFINE_integer("num_scenario", 9, "Number of scenarios to generate.")  # todo
+    flags.DEFINE_float("num_hour", 10.0, "Number of hours to generate scenarios for.")  # todo:
     flags.DEFINE_integer("min_obs", 5, "Minimum number of obstacles.")
     flags.DEFINE_integer("max_obs", 15, "Maximum number of obstacles.")
 
