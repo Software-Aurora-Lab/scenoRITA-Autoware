@@ -6,11 +6,15 @@ from typing import Set, Tuple
 
 import matplotlib as mpl
 import numpy as np
-from cyber_record.record import Record
+from autoware_auto_perception_msgs.msg import PredictedObjects, PredictedObject
+from nav_msgs.msg import Odometry
+
+from autoware.rosbag_reader import ROSBagReader
 from loguru import logger
 from matplotlib import pyplot as plt
 
-from apollo.map_service import load_map_service
+from autoware.map_service import load_map_service
+from config import DIR_ROOT
 
 mpl.rcParams["figure.dpi"] = 900
 
@@ -37,17 +41,27 @@ def get_color(alpha: float):
 
 def analysis_worker(record_path: Path) -> LocationAnalysis:
     logger.info(f"Processing {record_path.name}")
-    record_file = Record(record_path, "r")
+    record_file = ROSBagReader(str(record_path))
     ego_coordinates: Set[Tuple[float, float]] = set()
     obs_coordinates: Set[Tuple[float, float]] = set()
 
+    has_routing_msg = False
     for topic, msg, t in record_file.read_messages():
-        if topic == "/apollo/localization/pose":
-            ego_coord = (msg.pose.position.x, msg.pose.position.y)
+        if not has_routing_msg:
+            if topic == "/planning/mission_planning/route":
+                has_routing_msg = True
+            else:
+                continue
+        if topic == "/localization/kinematic_state":
+            msg: Odometry = record_file.deserialize_msg(msg, topic)
+            ego_coord = (msg.pose.pose.position.x, msg.pose.pose.position.y)
             ego_coordinates.add(ego_coord)
-        elif topic == "/apollo/perception/obstacles":
-            for obs in msg.perception_obstacle:
-                obs_coord = (obs.position.x, obs.position.y)
+        elif topic == "/perception/object_recognition/objects":
+            msg: PredictedObjects = record_file.deserialize_msg(msg, topic)
+            for obs in msg.objects:
+                obs: PredictedObject
+                obs_coord = (obs.kinematics.initial_pose_with_covariance.pose.position.x,
+                             obs.kinematics.initial_pose_with_covariance.pose.position.y)
                 obs_coordinates.add(obs_coord)
     return LocationAnalysis(ego_coordinates, obs_coordinates)
 
@@ -66,8 +80,9 @@ def plot_experiment_heatmap(map_name: str, record_root: Path, output_path: Path)
     # plot map for 2 subplots
     for i in range(1, 3):
         plt.subplot(1, 2, i)
-        for lane_id in map_service.lane_table.keys():
-            central_curve = map_service.get_lane_central_curve_by_id(lane_id)
+        map_service.get_vehicle_lanes()
+        for lane_id in map_service.all_ln_ids:
+            central_curve = map_service.get_center_line_lst_by_id(lane_id)
             plt.plot(*central_curve.xy, "k", alpha=0.1)
             minx, miny, maxx, maxy = central_curve.bounds
             min_x = min(min_x, minx)
@@ -85,7 +100,7 @@ def plot_experiment_heatmap(map_name: str, record_root: Path, output_path: Path)
     obs_heat_map_values = np.zeros((len(x_ranges) + 1, len(y_ranges) + 1))
 
     with mp.Pool(mp.cpu_count()) as pool:
-        results = pool.map(analysis_worker, record_root.rglob("*.00000"))
+        results = pool.map(analysis_worker, record_root.rglob("*.db3"))
         for result in results:
             for ego_coord in result.ego_locations:
                 x_index = np.searchsorted(x_ranges, ego_coord[0])
@@ -136,22 +151,25 @@ def plot_experiment_heatmap(map_name: str, record_root: Path, output_path: Path)
 
 
 if __name__ == "__main__":
-    avfuzzer_path = (
-        "/home/yuqi/Desktop/Major_Revision/AV-FUZZER/12hr_1/simulation/records"
-    )
-    autofuzz_path = "/home/yuqi/Desktop/Major_Revision/AutoFuzz/1hr_1"
-
-    scenoRITA_sf_path = (
-        "/home/yuqi/ResearchWorkspace/scenoRITA-V3/out/0507_165932_san_francisco"
-    )
-    scenoRITA_ba_path = (
-        "/home/yuqi/ResearchWorkspace/scenoRITA-V3/out/0424_213748_borregas_ave"
-    )
+    # avfuzzer_path = (
+    #     "/home/yuqi/Desktop/Major_Revision/AV-FUZZER/12hr_1/simulation/records"
+    # )
+    # autofuzz_path = "/home/yuqi/Desktop/Major_Revision/AutoFuzz/1hr_1"
+    #
+    # scenoRITA_sf_path = (
+    #     "/home/yuqi/ResearchWorkspace/scenoRITA-V3/out/0507_165932_san_francisco"
+    # )
+    # scenoRITA_ba_path = (
+    #     "/home/yuqi/ResearchWorkspace/scenoRITA-V3/out/0424_213748_borregas_ave"
+    # )
+    custom_folder = "0430_032448_YTU Davutpasa campus"
+    assert custom_folder is not None, "Please specify the custom folder"
+    ytu_path = Path(DIR_ROOT, "out", custom_folder)
 
     exp_records = [
         # ("san_francisco", avfuzzer_path, "avfuzzer"),
         # ("borregas_ave", autofuzz_path, "autofuzz"),
-        ("san_francisco", scenoRITA_sf_path, "scenoRITA"),
+        ("YTU Davutpasa campus", ytu_path, "scenoRITA"),
         # ("borregas_ave", scenoRITA_ba_path, "scenoRITA"),
     ]
 
