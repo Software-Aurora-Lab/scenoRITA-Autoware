@@ -234,12 +234,14 @@ def main(argv):
     priority = {
         "Collision": 1,
         "Speeding": 2,
-        "Comfort": 3,
-        "UnsafeLaneChange": 4
+        "FastAccel": 3,
+        "HardBraking": 4,
+        "UnsafeLaneChange": 5
     }
 
     def get_priority(event):
-        return priority.get(event, 5)
+        assert event in priority
+        return priority.get(event)
 
     csv_files = sorted(
         Path(get_output_dir(), "violations").glob("*.csv"),
