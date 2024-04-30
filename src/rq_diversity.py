@@ -66,6 +66,10 @@ def analysis_worker(record_path: Path) -> LocationAnalysis:
     return LocationAnalysis(ego_coordinates, obs_coordinates)
 
 
+def generator_adapter(generator):
+    for g in generator:
+        yield g.parent
+
 def plot_experiment_heatmap(map_name: str, record_root: Path, output_path: Path):
     plt.cla()
     plt.clf()
@@ -100,7 +104,7 @@ def plot_experiment_heatmap(map_name: str, record_root: Path, output_path: Path)
     obs_heat_map_values = np.zeros((len(x_ranges) + 1, len(y_ranges) + 1))
 
     with mp.Pool(mp.cpu_count()) as pool:
-        results = pool.map(analysis_worker, record_root.rglob("*.db3"))
+        results = pool.map(analysis_worker, generator_adapter(record_root.rglob("*.db3")))
         for result in results:
             for ego_coord in result.ego_locations:
                 x_index = np.searchsorted(x_ranges, ego_coord[0])
