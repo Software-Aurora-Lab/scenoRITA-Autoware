@@ -245,7 +245,7 @@ def main(argv):
 
     csv_files = sorted(
         Path(get_output_dir(), "violations").glob("*.csv"),
-        key=lambda x: get_priority(x.name),
+        key=lambda x: get_priority(x.name.split(".")[0]),
     )
 
     for csv_file in csv_files:
