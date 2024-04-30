@@ -1,4 +1,3 @@
-import shutil
 import time
 import subprocess
 from pathlib import Path
@@ -21,12 +20,6 @@ def replay_scenarios_in_threading(scenario_list, containers):
             thread.start()
         for thread in thread_list:
             thread.join()
-
-
-def delete_local_records(scenario: OpenScenario):
-    path = Path(get_output_dir(), "records", f"{scenario.get_id()}")
-    assert path.exists()
-    shutil.rmtree(str(path))
 
 
 def replay_scenario(scenario: OpenScenario, container):

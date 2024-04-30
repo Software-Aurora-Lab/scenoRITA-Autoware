@@ -6,7 +6,7 @@ from typing import Optional
 
 from environment.container import Container
 from autoware.open_scenario import OpenScenario
-from scenario_handling.ScenarioReplayer import replay_scenario, delete_local_records
+from scenario_handling.ScenarioReplayer import replay_scenario
 from scenoRITA.components.grading_metrics import GradingResult, grade_scenario
 from scenoRITA.representation import ObstacleFitness
 
@@ -106,5 +106,4 @@ def analysis_worker(
             else:
                 result_queue.put(grading_result)
 
-            delete_local_records(scenario)
         _logger.info(f"{sce_id}: analysis end")
