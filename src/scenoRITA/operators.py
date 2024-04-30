@@ -214,10 +214,11 @@ class GeneticOperators:
         """
         Perform crossover between two obstacles.
             Mutates the obstacles in place.
+            note: (l, w, h) is binding with the obstacle type.
         :param lhs: First obstacle.
         :param rhs: Second obstacle.
         """
-        cx_index = random.randint(0, 6)
+        cx_index = random.randint(0, 3)
         if cx_index < 1:
             lhs.initial_position, rhs.initial_position = (
                 rhs.initial_position,
@@ -232,12 +233,6 @@ class GeneticOperators:
         if cx_index < 3:
             lhs.speed, rhs.speed = rhs.speed, lhs.speed
         if cx_index < 4:
-            lhs.width, rhs.width = rhs.width, lhs.width
-        if cx_index < 5:
-            lhs.length, rhs.length = rhs.length, lhs.length
-        if cx_index < 6:
-            lhs.height, rhs.height = rhs.height, lhs.height
-        if cx_index < 7:
             lhs.motion, rhs.motion = rhs.motion, lhs.motion
 
         self._validate_obstacle(lhs)  # reset the obstacle size and speed based on the obstacle type
@@ -247,10 +242,10 @@ class GeneticOperators:
         """
         Perform mutation on an obstacle.
             Mutates the obstacle in place.
+            note: (l, w, h) is binding with the obstacle type.
         :param obstacle: Obstacle to mutate.
         """
-        mut_index = random.randint(0, 6)
-        nw, nl, nh = self.generator.generate_obstacle_dimensions(obstacle.type)
+        mut_index = random.randint(0, 4)
         if mut_index == 0:
             init, final = self.generator.generate_obstacle_route(obstacle.type)
             obstacle.initial_position = init
@@ -259,12 +254,6 @@ class GeneticOperators:
             obstacle.type = self.generator.generate_obstacle_type()
         elif mut_index == 2:
             obstacle.speed = self.generator.generate_obstacle_speed(obstacle.type)
-        elif mut_index == 3:
-            obstacle.width = nw
-        elif mut_index == 4:
-            obstacle.length = nl
-        elif mut_index == 5:
-            obstacle.height = nh
         else:
             obstacle.motion = self.generator.generate_obstacle_motion()
 
