@@ -137,7 +137,7 @@ def evaluate_scenarios(
             violations_dir.mkdir(parents=True, exist_ok=True)
             for violation in results[sce_id].violations:
                 # copy record to violations folder
-                shutil.copy2(results[sce_id].record, violations_dir)
+                shutil.copytree(results[sce_id].record.parent, violations_dir, dirs_exist_ok=True)
                 violation_csv = Path(violations_dir, f"{violation.main_type}.csv")
                 if not violation_csv.exists():
                     with open(violation_csv, "w") as f:
