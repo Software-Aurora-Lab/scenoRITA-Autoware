@@ -70,7 +70,7 @@ class Container:
             f.write(f"  architecture_type:=awf/universe \\\n")
             f.write(f"  record:=true \\\n")
             f.write(f"  port:={str(self.script_port)} \\\n")
-            f.write(f"  scenario:={str(get_output_dir())}/input/{scenario.scenario_id}.yaml \\\n")
+            f.write(f'  scenario:="{str(get_output_dir())}/input/{scenario.get_id()}.yaml" \\\n')
             f.write(f"  sensor_model:=sample_sensor_kit \\\n")
             f.write(f"  vehicle_model:=sample_vehicle")
         return script_path
