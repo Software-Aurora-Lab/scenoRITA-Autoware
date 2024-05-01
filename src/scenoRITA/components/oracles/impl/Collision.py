@@ -65,7 +65,10 @@ class Collision(BasicMetric):
 
         objs = self.last_perception.objects
         for obs in objs:
-            obs_id = obs_hash(obs.shape.dimensions.x, obs.shape.dimensions.y, obs.shape.dimensions.z)
+            x, y, z = (round(obs.shape.dimensions.x, 2),
+                       round(obs.shape.dimensions.y, 2),
+                       round(obs.shape.dimensions.z, 2))
+            obs_id = obs_hash(x, y, z)
             if obs_id in self.excluded_obs:
                 continue
 
