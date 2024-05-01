@@ -7,6 +7,7 @@ import pandas as pd
 from absl import app, flags
 from loguru import logger
 
+from autoware.map_service import load_map_service
 from mylib.clustering import cluster
 from scenoRITA.components.grading_metrics import GradingResult, grade_scenario
 from utils import PROJECT_ROOT
@@ -105,6 +106,7 @@ def cluster_violations(root: Path) -> None:
 def main(args) -> None:
     del args
     root_dir = Path(flags.FLAGS.dir)
+    load_map_service(flags.FLAGS.map)
     assert root_dir.exists(), f"{root_dir} does not exist"
     check_violations(root_dir, flags.FLAGS.map)
     cluster_violations(root_dir)
