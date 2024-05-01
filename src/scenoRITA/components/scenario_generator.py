@@ -199,7 +199,7 @@ class ScenarioGenerator:
         return result
 
     def generate_ego_car(self) -> EgoCar:
-        generate_junction_scenario = random.random() < 0.6
+        generate_junction_scenario = random.random() < 0.9
         if generate_junction_scenario:
             junction_lanes = self.map_service.get_junction_lanes()
             while True:
