@@ -7,7 +7,6 @@ import pandas as pd
 from absl import app, flags
 from loguru import logger
 
-from apollo.map_service import load_map_service
 from mylib.clustering import cluster
 from scenoRITA.components.grading_metrics import GradingResult, grade_scenario
 from utils import PROJECT_ROOT
@@ -16,17 +15,15 @@ warnings.filterwarnings("ignore")
 
 
 def analyze_scenario(
-    map_name: str,
-    task_queue: "mp.Queue[Optional[Tuple[int, int, Path]]]",
-    result_queue: "mp.Queue[GradingResult]",
+        task_queue: "mp.Queue[Optional[Tuple[int, int, Path]]]",
+        result_queue: "mp.Queue[GradingResult]",
 ) -> None:
-    map_service = load_map_service(map_name)
     while True:
         record_path = task_queue.get()
         if record_path is None:
             break
         logger.info(f"Processing {record_path[2].name}")
-        result = grade_scenario(record_path[2].name, record_path[2], map_service)
+        result = grade_scenario(record_path[2].name, record_path[2])
         logger.info(f"Finished {record_path[2].name}")
         if result:
             result_queue.put(result)
@@ -37,7 +34,8 @@ def check_violations(root: Path, map_name: Optional[str]) -> None:
         # Already processed
         return
     assert map_name is not None, "Please specify map name"
-    records = list(root.rglob("*.00000"))
+    records = list(root.rglob("*.db3"))
+    records = [x.parent for x in records]
     violation_dfs = dict()
     with mp.Manager() as manager:
         worker_num = mp.cpu_count()
@@ -51,7 +49,7 @@ def check_violations(root: Path, map_name: Optional[str]) -> None:
 
         pool.starmap(
             analyze_scenario,
-            [(map_name, task_queue, result_queue) for _ in range(worker_num)],
+            [(task_queue, result_queue) for _ in range(worker_num)],
         )
         pool.close()
 
@@ -61,11 +59,11 @@ def check_violations(root: Path, map_name: Optional[str]) -> None:
 
         for r in results:
             for v in r.violations:
-                if v.type not in violation_dfs:
-                    violation_dfs[v.type] = pd.DataFrame(
+                if v.main_type not in violation_dfs:
+                    violation_dfs[v.main_type] = pd.DataFrame(
                         columns=["sce_id"] + list(v.features.keys())
                     )
-                target_df = violation_dfs[v.type]
+                target_df = violation_dfs[v.main_type]
                 target_df.loc[len(target_df)] = [r.scenario_id] + list(
                     v.features.values()
                 )
@@ -74,13 +72,25 @@ def check_violations(root: Path, map_name: Optional[str]) -> None:
 
 
 def cluster_violations(root: Path) -> None:
-    violation_order = "CSFHU"
+    # summarize results
+    priority = {
+        "Collision": 1,
+        "Speeding": 2,
+        "FastAccel": 3,
+        "HardBraking": 4,
+        "UnsafeLaneChange": 5
+    }
+
+    def get_priority(event):
+        assert event in priority
+        return priority.get(event)
+
     violation_csvs = list(root.glob("*.csv"))
 
     if len(violation_csvs) == 0:
         print("No violations found")
 
-    violation_csvs.sort(key=lambda x: violation_order.index(x.name[0]))
+    violation_csvs.sort(key=lambda x: get_priority(x.name.split(".")[0]))
     for csv_file in violation_csvs:
         violation_name = csv_file.name[:-4]
         clustered_df = cluster(csv_file)
