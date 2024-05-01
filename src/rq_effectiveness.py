@@ -113,6 +113,6 @@ def main(args) -> None:
 
 
 if __name__ == "__main__":
-    flags.DEFINE_string("dir", None, "Experiment root directory", required=True)
+    flags.DEFINE_string("dir", None, "Experiment root directory", required=True)  # something like out/xxx/records
     flags.DEFINE_string("map", None, "Map name", required=False)
     app.run(main)
