@@ -22,7 +22,7 @@ class RecordAnalyzer:
         return [
             '/localization/acceleration',
             '/localization/kinematic_state',
-            '/perception/object_recognition/objects',
+            '/perception/object_recognition/ground_truth/objects',
             '/planning/mission_planning/route',
         ]
 
