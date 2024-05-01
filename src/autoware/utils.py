@@ -1,7 +1,7 @@
 import math
 import random
 
-from autoware_auto_perception_msgs.msg import PredictedObject
+from autoware_auto_perception_msgs.msg import TrackedObject
 from builtin_interfaces.msg import Time
 from geometry_msgs.msg import Point, Quaternion
 from shapely import LineString, Polygon
@@ -148,13 +148,13 @@ def quaternion_2_heading(orientation: Quaternion) -> float:
     return normalize_angle(yaw)
 
 
-def obstacle_to_polygon(obs: PredictedObject) -> Polygon:
+def obstacle_to_polygon(obs: TrackedObject) -> Polygon:
     """
     Generate polygon for the Obstacle Object
 
     Parameters:
-        obs: PredictedObject
-            predicted object of the obstacle
+        obs: TrackedObject
+            tracked object of the obstacle
 
     Returns:
         points: Polygon
@@ -162,7 +162,7 @@ def obstacle_to_polygon(obs: PredictedObject) -> Polygon:
     """
     if obs.shape.type == 1:
         raise NotImplementedError("Not implemented for cylinder")
-    obs_heading = quaternion_2_heading(obs.kinematics.initial_pose_with_covariance.pose.orientation)
+    obs_heading = quaternion_2_heading(obs.kinematics.pose_with_covariance.pose.orientation)
     points = []
     half_w = obs.shape.dimensions.y / 2.0
     front_l = obs.shape.dimensions.x / 2.0
@@ -180,8 +180,8 @@ def obstacle_to_polygon(obs: PredictedObject) -> Polygon:
                 front_l * sin_h - half_w * cos_h)]
     for x, y in vectors:
         p = Point()
-        p.x = obs.kinematics.initial_pose_with_covariance.pose.position.x + x
-        p.y = obs.kinematics.initial_pose_with_covariance.pose.position.y + y
+        p.x = obs.kinematics.pose_with_covariance.pose.position.x + x
+        p.y = obs.kinematics.pose_with_covariance.pose.position.y + y
         p.z = 0.0
         points.append(p)
 
