@@ -21,7 +21,7 @@ class Speeding(BasicMetric):
 
     def on_new_message(self, topic: str, message, t):
         ego_position = message.pose.pose.position
-        ego_velocity = calculate_velocity(message.twist.twist.linear)
+        ego_velocity = calculate_velocity(message.twist.twist.linear) * 3.6
 
         if not self.mh.has_routing_plan():
             return
