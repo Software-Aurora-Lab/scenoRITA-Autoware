@@ -1,7 +1,7 @@
 from collections import defaultdict
 from typing import Optional, Dict
 
-from autoware_auto_perception_msgs.msg import PredictedObjects
+from autoware_auto_perception_msgs.msg import TrackedObjects, TrackedObject
 from geometry_msgs.msg import Pose
 from nav_msgs.msg import Odometry
 
@@ -14,7 +14,7 @@ from scenoRITA.components.oracles.OracleInterrupt import OracleInterrupt
 
 class Collision(BasicMetric):
     last_localization: Optional[Odometry]
-    last_perception: Optional[PredictedObjects]
+    last_perception: Optional[TrackedObjects]
 
     def __init__(self):
         super().__init__()
@@ -29,7 +29,7 @@ class Collision(BasicMetric):
     def get_interested_topics(self):
         return [
             '/localization/kinematic_state',
-            '/perception/object_recognition/objects'
+            '/perception/object_recognition/ground_truth/objects'
         ]
 
     def on_new_message(self, topic: str, message, t):
@@ -115,12 +115,12 @@ class Collision(BasicMetric):
                 # add violation if obs is in lane
                 if obs_in_lane:
                     features = BasicMetric.get_basic_info_from_localization(self.last_localization)
-                    features['obs_x'] = obs.kinematics.initial_pose_with_covariance.pose.position.x
-                    features['obs_y'] = obs.kinematics.initial_pose_with_covariance.pose.position.y
+                    features['obs_x'] = obs.kinematics.pose_with_covariance.pose.position.x
+                    features['obs_y'] = obs.kinematics.pose_with_covariance.pose.position.y
                     features['obs_heading'] = quaternion_2_heading(
-                        obs.kinematics.initial_pose_with_covariance.pose.orientation)
+                        obs.kinematics.pose_with_covariance.pose.orientation)
                     features['obs_speed'] = calculate_velocity(
-                        obs.kinematics.initial_twist_with_covariance.twist.linear)
+                        obs.kinematics.pose_with_covariance.twist.linear)
                     features['obs_type'] = obs.classification[0].label
                     features['obs_id'] = obs_id
                     self.violations.append(
