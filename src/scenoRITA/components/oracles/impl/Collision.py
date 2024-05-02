@@ -120,7 +120,7 @@ class Collision(BasicMetric):
                     features['obs_heading'] = quaternion_2_heading(
                         obs.kinematics.pose_with_covariance.pose.orientation)
                     features['obs_speed'] = calculate_velocity(
-                        obs.kinematics.pose_with_covariance.twist.linear)
+                        obs.kinematics.twist_with_covariance.twist.linear)
                     features['obs_type'] = obs.classification[0].label
                     features['obs_id'] = obs_id
                     self.violations.append(
