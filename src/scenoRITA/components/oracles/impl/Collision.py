@@ -93,7 +93,7 @@ class Collision(BasicMetric):
                 if self.distance_traveled == 0.0:
                     continue
 
-                obs_lane = self.map_service.get_nearest_lanes_w_range(self.last_localization.pose.pose, 10)
+                obs_lane = self.map_service.get_nearest_lanes_w_range(obs.kinematics.pose_with_covariance.pose, 10)
                 obs_in_lane = False
                 for lane in obs_lane:
                     lb, rb = self.map_service.get_lane_boundaries_by_id(lane.id)
