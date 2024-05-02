@@ -210,7 +210,7 @@ class TestMapServiceTW(unittest.TestCase):
 
     def test_get_current_lanelet(self):
         # 625.8884, 46525.4999
-        lane = self.map_service.get_current_lanelets(Point(x=620.4646, y=46512.2191, z=0.))  # z does not matter
+        lane = self.map_service.get_veh_current_lanelets(Point(x=620.4646, y=46512.2191, z=0.))  # z does not matter
         self.assertEquals([10251], [ll.id for ll in lane])
 
     def test_nearest_lane(self):
@@ -239,17 +239,23 @@ class TestMapServiceTW(unittest.TestCase):
         self.assertTrue(self.map_service.is_in_lane(p, 10251))
 
     def test_get_lane_successors(self):
-        print(self.map_service.get_reachable_descendants(1718, "vehicle", False))
-        print(self.map_service.get_successors_for_lane(1718))
-        print(1718)
-        print(self.map_service.get_lane_by_id(1718).leftBound)
-        print(self.map_service.get_lane_by_id(1718).rightBound)
-        print(1720)
-        print(self.map_service.get_lane_by_id(1720).leftBound)
-        print(self.map_service.get_lane_by_id(1720).rightBound)
-        print(1721)
-        print(self.map_service.get_lane_by_id(1721).leftBound)
-        print(self.map_service.get_lane_by_id(1721).rightBound)
+        print(*self.map_service.get_reachable_to(1720, True))
+        lc_1718 = self.map_service.get_reachable_descendants(1718, "vehicle", True)
+        wo_lc_1718 = self.map_service.get_reachable_descendants(1718, "vehicle", False)
+        # print(*self.map_service.get_vehicle_shortest_path_src_tgt(1718, 1720, True))
+        print(1720 in lc_1718)
+        print(1720 in wo_lc_1718)
+        print(wo_lc_1718, "reachable from 1718 w/o lane change")
+        print("Successors of ", self.map_service.get_successors_for_lane(1718))
+        # print(1718)
+        print("1718 left bound: ", self.map_service.get_lane_by_id(1718).leftBound)
+        print("1718 right bound: ", self.map_service.get_lane_by_id(1718).rightBound)
+        # print(1720)
+        print("1720 left bound: ", self.map_service.get_lane_by_id(1720).leftBound)
+        print("1720 right bound: ", self.map_service.get_lane_by_id(1720).rightBound)
+        # print(1721)
+        print("1721 left bound: ", self.map_service.get_lane_by_id(1721).leftBound)
+        print("1721 right bound: ", self.map_service.get_lane_by_id(1721).rightBound)
 
     def test_get_lane_predecessors(self):
         print(self.map_service.get_successors_for_lane(5818))

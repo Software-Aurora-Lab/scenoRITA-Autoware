@@ -100,7 +100,7 @@ class TestMapServiceGebze(unittest.TestCase):
 
     @unittest.skip("unfinished")
     def test_get_current_lanelet(self):
-        lane = self.map_service.get_current_lanelets(Point(x=59192.2, y=43041.8, z=0.))  # z does not matter
+        lane = self.map_service.get_veh_current_lanelets(Point(x=59192.2, y=43041.8, z=0.))  # z does not matter
         self.assertEquals([8221], lane.id)
 
     def test_get_lane_successors(self):
