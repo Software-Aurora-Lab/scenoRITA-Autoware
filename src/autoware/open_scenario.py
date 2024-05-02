@@ -636,8 +636,8 @@ class OpenScenario:
             }
         }
         osc['Storyboard']['Story'][0]['Act'].extend(self.obstacle_reach_stop_actions())
-        osc['Storyboard']['Story'][0]['Act'][0]['ManeuverGroup'][0]['Maneuver'][0]['Event'][1]['StartTrigger'][
-            'ConditionGroup'].extend(self.__generate_end_collision_condition())
+        # osc['Storyboard']['Story'][0]['Act'][0]['ManeuverGroup'][0]['Maneuver'][0]['Event'][1]['StartTrigger'][
+        #     'ConditionGroup'].extend(self.__generate_end_collision_condition())
         return {
             "ScenarioModifiers": self.get_scenario_modifiers(),
             "OpenSCENARIO": osc
