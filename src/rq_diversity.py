@@ -56,12 +56,12 @@ def analysis_worker(record_path: Path) -> LocationAnalysis:
             msg: Odometry = record_file.deserialize_msg(msg, topic)
             ego_coord = (msg.pose.pose.position.x, msg.pose.pose.position.y)
             ego_coordinates.add(ego_coord)
-        elif topic == "/perception/object_recognition/objects":
+        elif topic == "/perception/object_recognition/ground_truth/objects":
             msg: PredictedObjects = record_file.deserialize_msg(msg, topic)
             for obs in msg.objects:
                 obs: PredictedObject
-                obs_coord = (obs.kinematics.initial_pose_with_covariance.pose.position.x,
-                             obs.kinematics.initial_pose_with_covariance.pose.position.y)
+                obs_coord = (obs.kinematics.pose_with_covariance.pose.position.x,
+                             obs.kinematics.pose_with_covariance.pose.position.y)
                 obs_coordinates.add(obs_coord)
     return LocationAnalysis(ego_coordinates, obs_coordinates)
 
