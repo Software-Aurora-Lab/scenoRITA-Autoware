@@ -12,10 +12,10 @@ from std_msgs.msg import Header
 from scenoRITA.representation import ObstacleType
 
 # VEHICLE CONFIGS FOR AUTOWARE
-AUTOWARE_VEHICLE_LENGTH = 4.77
-AUTOWARE_VEHICLE_WIDTH = 1.83
+AUTOWARE_VEHICLE_LENGTH = 4.89
+AUTOWARE_VEHICLE_WIDTH = 1.64+0.128*2
 AUTOWARE_VEHICLE_HEIGHT = 2.5
-AUTOWARE_VEHICLE_back_edge_to_center = 1.030
+AUTOWARE_VEHICLE_back_edge_to_center = 1.1
 
 
 def generate_adc_polygon(position: Point, theta: float):
