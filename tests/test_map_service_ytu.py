@@ -65,7 +65,7 @@ class TestMapServiceYTU(unittest.TestCase):
     def test_get_current_lane(self):
         # 625.8884, 46525.4999
         # 58649.6655, 43455.7251
-        lanes = self.map_service.get_current_lanelets(Point(x=58649.6655, y=43455.7251, z=0.))
+        lanes = self.map_service.get_veh_current_lanelets(Point(x=58649.6655, y=43455.7251, z=0.))
         lanes = self.map_service.get_nearest_lanes_with_heading(
             Pose(
                 position=Point(x=58654.1228, y=43470.7423, z=0.),
@@ -161,7 +161,7 @@ class TestMapServiceYTU(unittest.TestCase):
     @unittest.skip("skip")
     def test_get_current_lanelet(self):
         # 625.8884, 46525.4999
-        lane = self.map_service.get_current_lanelets(Point(x=620.4646, y=46512.2191, z=0.))  # z does not matter
+        lane = self.map_service.get_veh_current_lanelets(Point(x=620.4646, y=46512.2191, z=0.))  # z does not matter
         self.assertEquals([10251], [ll.id for ll in lane])
 
     @unittest.skip("unfinished")
@@ -210,6 +210,9 @@ class TestMapServiceYTU(unittest.TestCase):
     def test_get_lane_predecessors(self):
         print(self.map_service.get_successors_for_lane(5818))
         print(self.map_service.get_reachable_descendants(5818))
+
+    def test_gen_0_sce_5(self):
+        print(*self.map_service.get_vehicle_shortest_path_src_tgt(1891, 4136, False))
 
     def tearDown(self):
         del self.map_service

@@ -4,7 +4,7 @@ from math import atan2
 from typing import Dict, List, Tuple, Optional, Set
 
 import lanelet2 as ll2
-from lanelet2.core import LaneletMap, Lanelet
+from lanelet2.core import LaneletMap, Lanelet, ConstLanelet
 from lanelet2.io import Origin, load
 from lanelet2.routing import RoutingGraph, LaneletPath
 from lanelet2 import traffic_rules
@@ -296,21 +296,18 @@ class MapService:
         y1, y2 = line.xy[1]
         return Point(ip.x, ip.y, 0.0), atan2(y2 - y1, x2 - x1)
 
-    def __get_closest_lane(self, pose: Pose) -> Lanelet:
+    def get_closest_lane(self, pose: Pose) -> ConstLanelet:
         return query.getClosestLanelet(self.ll_map.laneletLayer, pose)
 
-    def get_nearest_lanes_w_range(self, pose: Pose | Point, rng: float = 0.0) -> Lanelet | List[Lanelet]:
-        if rng == 0.0:
-            return self.__get_closest_lane(pose)
-        else:
-            return query.getLaneletsWithinRange(self.ll_map.laneletLayer, pose.position, rng)
+    def get_nearest_lanes_w_range(self, pose: Pose, rng: float):
+        return query.getLaneletsWithinRange(self.ll_map.laneletLayer, pose.position, rng)
 
     def is_in_lane(self, pose: Pose, ll: int | Lanelet, radius=0.0) -> bool:
         if isinstance(ll, int):
             ll = self.get_lane_by_id(ll)
         return utilities.isInLanelet(pose, ll, radius)
 
-    def get_current_lanelets(self, point: Point):
+    def get_veh_current_lanelets(self, point: Point):
         """
             if the point is not in any lanelet, return None
             else return the lanelets
@@ -323,6 +320,16 @@ class MapService:
             if lane.id in self.get_vehicle_lanes():
                 candidate_lanes.append(lane)
         return candidate_lanes
+
+    def get_veh_current_lane(self, pose: Pose):
+        lls = self.get_veh_current_lanelets(pose.position)
+        if len(lls) == 0:
+            return []
+        closet_lane = self.get_closest_lane(pose)
+        if closet_lane in lls:
+            return [closet_lane]
+        else:
+            return lls
 
     def get_nearest_lanes_with_heading(self, pose: Pose):
         in_rng_lanes = self.get_nearest_lanes_w_range(pose, 3)
@@ -356,8 +363,14 @@ class MapService:
         else:
             raise NotImplementedError(f"Unknown obstacle type: {_t}")
 
+    def get_reachable_to(self, lane_id, allow_lane_change: bool):
+        return self.rg_veh.reachableSetTowards(self.get_lane_by_id(lane_id), 10e9, allowLaneChanges=allow_lane_change)
+
     def get_length_of_lane(self, lane_id: int) -> float:
         return utilities.getLaneletLength2d(self.ll_map.laneletLayer[lane_id])
+
+    def get_signals(self):
+        return query.trafficLights(self.ll_map.laneletLayer)
 
 
 class LaneSubtype(Enum):

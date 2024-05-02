@@ -20,14 +20,13 @@ class Speeding(BasicMetric):
         return ['/localization/kinematic_state']
 
     def on_new_message(self, topic: str, message, t):
-        ego_position = message.pose.pose.position
-        ego_velocity = calculate_velocity(message.twist.twist.linear)
+        ego_pose = message.pose.pose
+        ego_velocity = calculate_velocity(message.twist.twist.linear) * 3.6
 
         if not self.mh.has_routing_plan():
             return
 
-        current_lanes = self.map_service.get_current_lanelets(ego_position)
-        current_lanes.sort(key=lambda x: self.speed_limits[x.id])
+        current_lanes = self.map_service.get_veh_current_lane(ego_pose)
         if len(current_lanes) == 0:
             self.trace.append((False, t, -1, dict()))
         else:

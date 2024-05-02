@@ -22,16 +22,19 @@ class RecordAnalyzer:
         return [
             '/localization/acceleration',
             '/localization/kinematic_state',
-            '/perception/object_recognition/objects',
+            '/perception/object_recognition/ground_truth/objects',
             '/planning/mission_planning/route',
         ]
 
     def analyze(self):
         has_localization = False
+        has_ground_truth = False
         reader = ROSBagReader(self.record_path)
         for topic, message, t in reader.read_messages():
             if not has_localization and topic == '/localization/kinematic_state':
                 has_localization = True
+            if not has_ground_truth and topic == '/perception/object_recognition/ground_truth/objects':
+                has_ground_truth = True
             if topic in self.topic_names():
                 msg = reader.deserialize_msg(message, topic)
                 try:
@@ -39,6 +42,7 @@ class RecordAnalyzer:
                 except OracleInterrupt:
                     break
         assert has_localization, "No localization in record"
+        assert has_ground_truth, "No ground truth in record"
         del reader
         return self.get_results()
 
