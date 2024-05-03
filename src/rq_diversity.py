@@ -6,7 +6,7 @@ from typing import Set, Tuple
 
 import matplotlib as mpl
 import numpy as np
-from autoware_auto_perception_msgs.msg import PredictedObjects, PredictedObject
+from autoware_auto_perception_msgs.msg import TrackedObjects, TrackedObject
 from nav_msgs.msg import Odometry
 
 from autoware.rosbag_reader import ROSBagReader
@@ -57,9 +57,9 @@ def analysis_worker(record_path: Path) -> LocationAnalysis:
             ego_coord = (msg.pose.pose.position.x, msg.pose.pose.position.y)
             ego_coordinates.add(ego_coord)
         elif topic == "/perception/object_recognition/ground_truth/objects":
-            msg: PredictedObjects = record_file.deserialize_msg(msg, topic)
+            msg: TrackedObjects = record_file.deserialize_msg(msg, topic)
             for obs in msg.objects:
-                obs: PredictedObject
+                obs: TrackedObject
                 obs_coord = (obs.kinematics.pose_with_covariance.pose.position.x,
                              obs.kinematics.pose_with_covariance.pose.position.y)
                 obs_coordinates.add(obs_coord)
@@ -167,14 +167,14 @@ if __name__ == "__main__":
     # scenoRITA_ba_path = (
     #     "/home/yuqi/ResearchWorkspace/scenoRITA-V3/out/0424_213748_borregas_ave"
     # )
-    custom_folder = "0430_032448_YTU Davutpasa campus"
+    custom_folder = ""  # todo:
     assert custom_folder is not None, "Please specify the custom folder"
     ytu_path = Path(PROJECT_ROOT, "out", custom_folder)
 
     exp_records = [
         # ("san_francisco", avfuzzer_path, "avfuzzer"),
         # ("borregas_ave", autofuzz_path, "autofuzz"),
-        ("YTU Davutpasa campus", ytu_path, "scenoRITA"),
+        ("", ytu_path, "scenoRITA"),  # todo:
         # ("borregas_ave", scenoRITA_ba_path, "scenoRITA"),
     ]
 
@@ -183,7 +183,7 @@ if __name__ == "__main__":
             start = time.perf_counter()
             logger.info(f"Plotting {map_name} {approach_name}")
             plot_experiment_heatmap(
-                map_name, Path(record_root), Path(record_root, f"{map_name}_{approach_name}.png")
+                map_name, Path(record_root), Path(record_root, f"{custom_folder}_{approach_name}.png")
             )
             minutes = (time.perf_counter() - start) / 60
             logger.info(f"Finished {map_name} {approach_name} in {minutes:.2f} minutes")
