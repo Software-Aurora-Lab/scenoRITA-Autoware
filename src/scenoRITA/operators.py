@@ -9,9 +9,8 @@ from autoware.map_service import MapService
 from autoware.utils import get_obstacle_type
 
 from .components.scenario_generator import ObstacleConstraints, ScenarioGenerator
-from .representation import Obstacle, ObstacleMotion
+from .representation import Obstacle, ObstacleMotion, EgoCar
 from autoware.open_scenario import OpenScenario
-from loguru import logger
 
 
 class GeneticOperators:
@@ -50,37 +49,37 @@ class GeneticOperators:
 
             if random.random() < self.replace_pb:
                 # replace ego car
-                logger.info("Replacing ego car for id: " + str(scenario_id))
+                # logger.info("Replacing ego car for id: " + str(scenario_id))
                 ego = self.generator.generate_ego_car()
             else:
                 # apply crossover to obstacles
                 for o1, o2 in zip(obstacles[::2], obstacles[1::2]):
                     if random.random() < self.cx_pb:
-                        logger.info("Crossover for id: " + str(scenario_id) + " obstacles: " + str(o1) + str(o2))
+                        # logger.info("Crossover for id: " + str(scenario_id) + " obstacles: " + str(o1) + str(o2))
                         self.crossover(o1, o2)
                 # apply mutation to obstacles
                 for mutant in obstacles:
                     if random.random() < self.mut_pb:
-                        logger.info("Mutation for id: " + str(scenario_id) + " obstacle: " + str(mutant))
-                        self.mutate(mutant)
+                        # logger.info("Mutation for id: " + str(scenario_id) + " obstacle: " + str(mutant))
+                        self.mutate(mutant, ego)
                 # add obstacles
                 if len(obstacles) > self.min_obs and random.random() < self.del_pb:
                     del obstacles[random.randint(0, len(obstacles) - 1)]
-                    logger.info("Deleting obstacle for id: " + str(scenario_id) + " obstacle" + str(
-                        obstacles[random.randint(0, len(obstacles) - 1)]))
+                    # logger.info("Deleting obstacle for id: " + str(scenario_id) + " obstacle" + str(
+                    #     obstacles[random.randint(0, len(obstacles) - 1)]))
                 if len(obstacles) < self.max_obs and random.random() < self.add_pb:
                     obstacles.append(self.generator.generate_obstacle(ego))
-                    logger.info("Adding obstacle for id: " + str(scenario_id) + " obstacle" + str(obstacles[-1]))
+                    # logger.info("Adding obstacle for id: " + str(scenario_id) + " obstacle" + str(obstacles[-1]))
 
             # validate scenario
             obs_size = len(obstacles)
             obs_routes: Set[str] = set()
             obs_static: Set[Point] = set()
             for obs in list(obstacles):
-                if not self._validate_obstacle_routing_info(obs):
+                if not self._validate_obstacle_routing_info(obs, ego_car=ego):
                     # routing info is invalid
-                    logger.info("Obstacle's routing info is None, removed: " + str(obs.id) + ", for id: " + str(
-                        scenario_id))
+                    # logger.info("Obstacle's routing info is None, removed: " + str(obs.id) + ", for id: " + str(
+                    #     scenario_id))
                     obstacles.remove(obs)
                     continue
                 # validate obstacles far enough from ego car
@@ -96,8 +95,8 @@ class GeneticOperators:
 
                 if ego_point.distance(obs_point) < max(obs.length, 5):
                     # obstacle's initial position is too close to the ego car
-                    logger.info("Obstacle's initial position is too close to the ego car, removed: " + str(
-                        obs) + ", for id: " + str(scenario_id))
+                    # logger.info("Obstacle's initial position is too close to the ego car, removed: " + str(
+                    #     obs) + ", for id: " + str(scenario_id))
                     obstacles.remove(obs)
                     continue
 
@@ -120,9 +119,9 @@ class GeneticOperators:
                         if obs_initial_point.distance(obs_i) < max(obs.length, 5):
                             # obstacle's initial position is
                             #   too close to another static obstacle
-                            logger.info(
-                                "Obstacle's initial position is too close to another static obstacle, removed: " + str(
-                                    obs) + ", for id: " + str(scenario_id))
+                            # logger.info(
+                            #     "Obstacle's initial position is too close to another static obstacle, removed: " + str(
+                            #         obs) + ", for id: " + str(scenario_id))
                             obstacles.remove(obs)
                             break
                     else:
@@ -130,8 +129,8 @@ class GeneticOperators:
                 elif obs.motion == ObstacleMotion.DYNAMIC:
                     if obs_route in obs_routes:
                         # obstacle's route overlaps with another obstacle
-                        logger.info("Obstacle's route overlaps with another obstacle, removed: " + str(
-                            obs) + ", for id: " + str(scenario_id))
+                        # logger.info("Obstacle's route overlaps with another obstacle, removed: " + str(
+                        #     obs) + ", for id: " + str(scenario_id))
                         obstacles.remove(obs)
                     else:
                         obs_routes.add(obs_route)
@@ -139,9 +138,9 @@ class GeneticOperators:
             # generate new obstacles if necessary
             while len(obstacles) < obs_size:
                 obstacles.append(self.generator.generate_obstacle(ego))
-                logger.info(
-                    "Adding obstacle for id: " + str(scenario_id) + " obstacle" + str(obstacles[-1]) + " (generated)")
-            logger.info("Scenario generated for id: " + str(scenario_id) + " obstacles size: " + str(len(obstacles)))
+                # logger.info(
+                #     "Adding obstacle for id: " + str(scenario_id) + " obstacle" + str(obstacles[-1]) + " (generated)")
+            # logger.info("Scenario generated for id: " + str(scenario_id) + " obstacles size: " + str(len(obstacles)))
             result.append(OpenScenario(
                 generation_id=next_generation_id,
                 scenario_id=scenario_id,
@@ -168,15 +167,15 @@ class GeneticOperators:
                 change_made = True
         return change_made
 
-    def _validate_obstacle_routing_info(self, obstacle: Obstacle):
+    def _validate_obstacle_routing_info(self, obstacle: Obstacle, ego_car: EgoCar):
         keep = False
         _t = get_obstacle_type(obstacle.type)
         llns = self.generator.obs_avail_lids[_t]
         if obstacle.initial_position is None or obstacle.initial_position.lane_id not in llns:
             # initial position is not in the available lanes
-            logger.info("Initial position is not in the available lanes, generating new route for obstacle: " + str(
-                obstacle.id))
-            obs_n = self.generator.generate_obstacle_route(obstacle.type)
+            # logger.info("Initial position is not in the available lanes, generating new route for obstacle: " + str(
+            #     obstacle.type))
+            obs_n = self.generator.generate_obstacle_route(obstacle.type, ego_car=ego_car)
             if obs_n == (None, None):
                 return keep
             obstacle.initial_position = obs_n[0]
@@ -184,9 +183,9 @@ class GeneticOperators:
             keep = True
         elif obstacle.final_position.lane_id not in llns:
             # final position is not in the available lanes
-            logger.info("Final position is not in the available lanes, generating new route for obstacle: " + str(
-                obstacle.id))
-            _, final = self.generator.generate_obstacle_route(obstacle.type, obstacle.initial_position.lane_id)
+            # logger.info("Final position is not in the available lanes, generating new route for obstacle: " + str(
+            #     obstacle.type))
+            _, final = self.generator.generate_obstacle_route(obstacle.type, ego_car, obstacle.initial_position.lane_id)
             if final is None:
                 return keep
             else:
@@ -196,17 +195,17 @@ class GeneticOperators:
             # both are in the available lanes, check if the final position is reachable from initial position
             reachable_descendants = self.map_service.get_reachable_descendants(obstacle.initial_position.lane_id, _t, False)  # obstacle does not change the lanes
             if obstacle.final_position.lane_id not in reachable_descendants:
-                logger.info("Final position is not reachable from initial position, generating new route for obstacle: " + str(
-                    obstacle.id))
-                _, final = self.generator.generate_obstacle_route(obstacle.type, obstacle.initial_position.lane_id)
+                # logger.info("Final position is not reachable from initial position, generating new route for obstacle: " + str(
+                #     obstacle.type))
+                _, final = self.generator.generate_obstacle_route(obstacle.type, ego_car, obstacle.initial_position.lane_id)
                 if final is None:
                     return keep
                 else:
-                    logger.info("New route generated for obstacle: " + str(obstacle.id) + " " + str(final))
+                    # logger.info("New route generated for obstacle: " + str(obstacle.type) + " " + str(final))
                     obstacle.final_position = final
                     keep = True
             else:
-                logger.info("Obstacle's route is valid: " + str(obstacle.id) + " " + str(obstacle.initial_position) + " " + str(obstacle.final_position))
+                # logger.info("Obstacle's route is valid: " + str(obstacle.id) + " " + str(obstacle.initial_position) + " " + str(obstacle.final_position))
                 keep = True
         return keep
 
@@ -238,7 +237,7 @@ class GeneticOperators:
         self._validate_obstacle(lhs)  # reset the obstacle size and speed based on the obstacle type
         self._validate_obstacle(rhs)  # reset the obstacle size and speed based on the obstacle type
 
-    def mutate(self, obstacle: Obstacle) -> None:
+    def mutate(self, obstacle: Obstacle, ego_car: EgoCar) -> None:
         """
         Perform mutation on an obstacle.
             Mutates the obstacle in place.
@@ -247,7 +246,7 @@ class GeneticOperators:
         """
         mut_index = random.randint(0, 4)
         if mut_index == 0:
-            init, final = self.generator.generate_obstacle_route(obstacle.type)
+            init, final = self.generator.generate_obstacle_route(obstacle.type, ego_car)
             obstacle.initial_position = init
             obstacle.final_position = final
         elif mut_index == 1:

@@ -155,13 +155,15 @@ class MapService:
             case LaneSubtype.ROAD.value:
                 self.veh_ln_ids.append(lane.id)
                 self.bic_ln_ids.append(lane.id)
-            case LaneSubtype.HIGHWAY.value | LaneSubtype.ROAD_SHOULDER.value:
+            # case LaneSubtype.HIGHWAY.value | LaneSubtype.ROAD_SHOULDER.value:
+            case LaneSubtype.HIGHWAY.value:
                 self.veh_ln_ids.append(lane.id)
             case LaneSubtype.CROSSWALK.value | LaneSubtype.WALKWAY.value:
                 self.ped_ln_ids.append(lane.id)
             case LaneSubtype.BICYCLE_LANE.value:
                 self.bic_ln_ids.append(lane.id)
-            case LaneSubtype.PLAY_STREET.value | LaneSubtype.EXIT.value:
+            case LaneSubtype.PLAY_STREET.value:
+            # case LaneSubtype.PLAY_STREET.value | LaneSubtype.EXIT.value:
                 self.veh_ln_ids.append(lane.id)
                 self.bic_ln_ids.append(lane.id)
                 self.ped_ln_ids.append(lane.id)
@@ -169,7 +171,8 @@ class MapService:
                 self.ped_ln_ids.append(lane.id)
                 self.bic_ln_ids.append(lane.id)
             case _:
-                raise NotImplementedError(f"Unknown lane subtype: {lane.attributes['subtype']}")
+                pass
+                # raise NotImplementedError(f"Unknown lane subtype: {lane.attributes['subtype']}")
 
     def __contains_participants(self, lane):
         return [p for p in lane.attributes.keys() if 'participant' in p]
@@ -217,6 +220,12 @@ class MapService:
         return self.rg_ped.shortestPath(self.get_lane_by_id(start), self.get_lane_by_id(end),
                                         withLaneChanges=with_lane_change)
 
+    def get_changable_neighbours(self, lane_id: int) -> List[int]:
+        cg_neighbors = query.getLaneChangeableNeighbors(self.rg_veh, self.get_lane_by_id(lane_id))
+        if cg_neighbors is None:
+            return []
+        return [x.id for x in cg_neighbors if x.id != lane_id]
+
     def get_bicycle_shortest_path_src_tgt(self, start: int, end: int, with_lane_change: bool):
         return self.rg_bic.shortestPath(self.get_lane_by_id(start), self.get_lane_by_id(end),
                                         withLaneChanges=with_lane_change)
@@ -225,8 +234,9 @@ class MapService:
         if lane.attributes['subtype'] not in [LaneSubtype.ROAD.value,
                                               LaneSubtype.HIGHWAY.value,
                                               LaneSubtype.PLAY_STREET.value,
-                                              LaneSubtype.EXIT.value,
-                                              LaneSubtype.ROAD_SHOULDER.value]:
+                                              # LaneSubtype.EXIT.value,
+                                              # LaneSubtype.ROAD_SHOULDER.value
+                                              ]:
             return
         if 'turn_direction' not in lane.attributes:
             self.non_junc_lns.append(lane.id)
@@ -302,6 +312,11 @@ class MapService:
     def get_nearest_lanes_w_range(self, pose: Pose, rng: float):
         return query.getLaneletsWithinRange(self.ll_map.laneletLayer, pose.position, rng)
 
+    def get_nearest_lanes_with_range(self, lane_id: int, s: float, rng: float):
+        point, _ = self.get_lane_coord_and_heading(lane_id, s)
+        lanes = query.getLaneletsWithinRange(self.ll_map.laneletLayer, Point(x=point.x, y=point.y, z=0.0), rng)
+        return [ll.id for ll in lanes]
+
     def is_in_lane(self, pose: Pose, ll: int | Lanelet, radius=0.0) -> bool:
         if isinstance(ll, int):
             ll = self.get_lane_by_id(ll)
@@ -372,19 +387,22 @@ class MapService:
     def get_signals(self):
         return query.trafficLights(self.ll_map.laneletLayer)
 
+    def get_stop_lines(self):
+        return query.stopLinesLanelets(self.ll_map.laneletLayer)
+
 
 class LaneSubtype(Enum):
     ROAD = 'road'
     HIGHWAY = 'highway'
     PLAY_STREET = 'play_street'
     BICYCLE_LANE = 'bicycle_lane'
-    EXIT = 'exit'
+    # EXIT = 'exit'
     WALKWAY = 'walkway'
     SHARED_WALKWAY = 'shared_walkway'
     CROSSWALK = 'crosswalk'
 
     # Autoware specific
-    ROAD_SHOULDER = 'road_shoulder'
+    # ROAD_SHOULDER = 'road_shoulder'
     PEDESTRIAN_LANE = 'pedestrian_lane'
 
     # veh: road, highway, play_street, exit, road_shoulder

@@ -67,25 +67,33 @@ class ScenarioGenerator:
         self.obs_avail_lids: Dict[str, Set[int]] = {_type: set(self.map_service.get_avail_lanes(_type)) for _type in
                                                     self.obs_types}
 
-    def generate_obstacle_route(self, obs_type: ObstacleType, initial_lane_id: int = -1) -> Tuple[
+    def generate_obstacle_route(self, obs_type: ObstacleType, ego_car: EgoCar, initial_lane_id: int = -1) -> Tuple[
         Optional[ObstaclePosition], Optional[ObstaclePosition]]:
         while True:
             _t = get_obstacle_type(obs_type)  # "vehicle" or "bicycle" or "pedestrian"
             if _t not in self.obs_types:
-                logger.info("No available routes for obstacle type {}", obs_type)
+                # logger.info("No available routes for obstacle type {}", obs_type)
                 if self.obs_avail_lids.__contains__(_t):
                     del self.obs_avail_lids[_t]
                 return None, None
             candidate_lanes = self.obs_avail_lids[_t]
             if not candidate_lanes:
                 self.obs_types.remove(_t)
-                logger.info("No available routes for obstacle type {}", _t)
+                # logger.info("No available routes for obstacle type {}", _t)
                 return None, None
 
             if initial_lane_id == -1 or initial_lane_id not in self.obs_avail_lids[_t]:
-                initial_lane_id = random.choice(list(self.obs_avail_lids[_t]))
-                if initial_lane_id not in self.obs_avail_lids[_t]:
-                    logger.info("Initial lane id is not valid, randomly choosing a new one {}", initial_lane_id)
+                cons_a = self.map_service.get_nearest_lanes_with_range(ego_car.initial_position.lane_id,
+                                                                       ego_car.initial_position.s, 100.0)
+                cons_b = self.map_service.get_nearest_lanes_with_range(ego_car.final_position.lane_id,
+                                                                    ego_car.final_position.s, 100.0)
+                candidate_lanes = (set(cons_a) | set(cons_b)) & (self.obs_avail_lids[_t])
+                if not candidate_lanes:
+                    initial_lane_id = random.choice(list(self.obs_avail_lids[_t]))
+                else:
+                    initial_lane_id = random.choice(list(candidate_lanes))
+                # if initial_lane_id not in self.obs_avail_lids[_t]:
+                #     logger.info("Initial lane id is not valid, randomly choosing a new one {}", initial_lane_id)
 
             reachable_lanes_wo_lc = self.map_service.get_reachable_descendants(initial_lane_id,
                                                                                _t, allow_lane_change=False)
@@ -162,7 +170,7 @@ class ScenarioGenerator:
 
         # Avoid generating obstacles that overlap with the ego car.
         while True:
-            initial, final = self.generate_obstacle_route(obs_type)
+            initial, final = self.generate_obstacle_route(obs_type, ego_car)
             if initial is None or final is None:
                 obs_type = self.generate_obstacle_type()
                 width, length, height = self.generate_obstacle_dimensions(obs_type)
@@ -231,6 +239,14 @@ class ScenarioGenerator:
                     continue
 
                 final_lane_id = random.choice(successors)
+                final_lane_cg_neighbours = self.map_service.get_changable_neighbours(final_lane_id)
+                if len(final_lane_cg_neighbours) != 0:
+                    if random.random() < 0.8:
+                        # print("randomly choosing a lane from the changeable neighbours")
+                        candidate = random.choice(final_lane_cg_neighbours)
+                        if self.map_service.get_length_of_lane(candidate) >= k_min_lane_length:
+                            final_lane_id = candidate
+
                 # assert initial_lane_id != -1
                 initial_lane_length = self.map_service.get_length_of_lane(
                     initial_lane_id
