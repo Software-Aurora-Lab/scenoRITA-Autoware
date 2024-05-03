@@ -9,9 +9,8 @@ from autoware.map_service import MapService
 from autoware.utils import get_obstacle_type
 
 from .components.scenario_generator import ObstacleConstraints, ScenarioGenerator
-from .representation import Obstacle, ObstacleMotion
+from .representation import Obstacle, ObstacleMotion, EgoCar
 from autoware.open_scenario import OpenScenario
-from loguru import logger
 
 
 class GeneticOperators:
@@ -62,7 +61,7 @@ class GeneticOperators:
                 for mutant in obstacles:
                     if random.random() < self.mut_pb:
                         # logger.info("Mutation for id: " + str(scenario_id) + " obstacle: " + str(mutant))
-                        self.mutate(mutant)
+                        self.mutate(mutant, ego)
                 # add obstacles
                 if len(obstacles) > self.min_obs and random.random() < self.del_pb:
                     del obstacles[random.randint(0, len(obstacles) - 1)]
@@ -77,7 +76,7 @@ class GeneticOperators:
             obs_routes: Set[str] = set()
             obs_static: Set[Point] = set()
             for obs in list(obstacles):
-                if not self._validate_obstacle_routing_info(obs):
+                if not self._validate_obstacle_routing_info(obs, ego_car=ego):
                     # routing info is invalid
                     # logger.info("Obstacle's routing info is None, removed: " + str(obs.id) + ", for id: " + str(
                     #     scenario_id))
@@ -168,7 +167,7 @@ class GeneticOperators:
                 change_made = True
         return change_made
 
-    def _validate_obstacle_routing_info(self, obstacle: Obstacle):
+    def _validate_obstacle_routing_info(self, obstacle: Obstacle, ego_car: EgoCar):
         keep = False
         _t = get_obstacle_type(obstacle.type)
         llns = self.generator.obs_avail_lids[_t]
@@ -176,7 +175,7 @@ class GeneticOperators:
             # initial position is not in the available lanes
             # logger.info("Initial position is not in the available lanes, generating new route for obstacle: " + str(
             #     obstacle.type))
-            obs_n = self.generator.generate_obstacle_route(obstacle.type)
+            obs_n = self.generator.generate_obstacle_route(obstacle.type, ego_car=ego_car)
             if obs_n == (None, None):
                 return keep
             obstacle.initial_position = obs_n[0]
@@ -186,7 +185,7 @@ class GeneticOperators:
             # final position is not in the available lanes
             # logger.info("Final position is not in the available lanes, generating new route for obstacle: " + str(
             #     obstacle.type))
-            _, final = self.generator.generate_obstacle_route(obstacle.type, obstacle.initial_position.lane_id)
+            _, final = self.generator.generate_obstacle_route(obstacle.type, ego_car, obstacle.initial_position.lane_id)
             if final is None:
                 return keep
             else:
@@ -198,7 +197,7 @@ class GeneticOperators:
             if obstacle.final_position.lane_id not in reachable_descendants:
                 # logger.info("Final position is not reachable from initial position, generating new route for obstacle: " + str(
                 #     obstacle.type))
-                _, final = self.generator.generate_obstacle_route(obstacle.type, obstacle.initial_position.lane_id)
+                _, final = self.generator.generate_obstacle_route(obstacle.type, ego_car, obstacle.initial_position.lane_id)
                 if final is None:
                     return keep
                 else:
@@ -238,7 +237,7 @@ class GeneticOperators:
         self._validate_obstacle(lhs)  # reset the obstacle size and speed based on the obstacle type
         self._validate_obstacle(rhs)  # reset the obstacle size and speed based on the obstacle type
 
-    def mutate(self, obstacle: Obstacle) -> None:
+    def mutate(self, obstacle: Obstacle, ego_car: EgoCar) -> None:
         """
         Perform mutation on an obstacle.
             Mutates the obstacle in place.
@@ -247,7 +246,7 @@ class GeneticOperators:
         """
         mut_index = random.randint(0, 4)
         if mut_index == 0:
-            init, final = self.generator.generate_obstacle_route(obstacle.type)
+            init, final = self.generator.generate_obstacle_route(obstacle.type, ego_car)
             obstacle.initial_position = init
             obstacle.final_position = final
         elif mut_index == 1:
