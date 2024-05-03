@@ -8,6 +8,7 @@ data/download/*
 src/test.py
 .vscode/
 tests/output/*
+tests/**
 .idea/
 
 # Created by https://www.toptal.com/developers/gitignore/api/python,macos,visualstudiocode,linux
