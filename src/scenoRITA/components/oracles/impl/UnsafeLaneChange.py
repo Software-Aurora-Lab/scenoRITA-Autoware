@@ -4,7 +4,7 @@ from itertools import groupby
 from shapely.geometry import Polygon
 from scenoRITA.components.oracles.Violation import Violation
 from scenoRITA.components.oracles.BasicMetric import BasicMetric
-from autoware.utils import generate_adc_polygon, quaternion_2_heading, get_real_time_from_msg
+from autoware.utils import generate_adc_polygon, quaternion_2_heading
 from functools import wraps
 import time
 
@@ -23,19 +23,13 @@ def timeit(func):
 
 class UnsafeLaneChange(BasicMetric):
     MINIMUM_DURATION = 5.0
-    PRUNE_DISTANCE = 350
-    FAST = False
+    FAST = True
 
     def __init__(self):
         super().__init__()
         self.count = 0
-        self.boundaries = self.map_service.get_lane_boundaries()
-        self.boundary_ids = sorted(self.boundaries.keys())
         self.__data = list()
-        self.cached_data = dict()
         self.fitness: Optional[float] = None
-
-        self.searchable_boundary_ids = set(self.boundary_ids)
 
     @timeit
     def on_new_message(self, topic: str, message, t):
@@ -44,40 +38,38 @@ class UnsafeLaneChange(BasicMetric):
         self.count += 1
         if UnsafeLaneChange.FAST and self.count % 15 != 0:
             return
-        t = get_real_time_from_msg(message.header)
-        position = message.pose.pose.position
-        if (position.x, position.y) in self.cached_data:
-            bid = self.cached_data[(position.x, position.y)]
-            features = self.get_basic_info_from_localization(message)
-            if bid == '':
-                self.__data.append((False, t, '', {}))
-            elif features['speed'] > 0:
-                features['boundary_id'] = self.boundary_ids.index(bid)
-                self.__data.append((True, t, bid, features))
-            return
+
+        ego_position = message.pose.pose.position
+        ego_pose = message.pose.pose
+        features = self.get_basic_info_from_localization(message)
         ego_heading = quaternion_2_heading(message.pose.pose.orientation)
 
-        ego_pts = generate_adc_polygon(message.pose.pose.position, ego_heading)
+        ego_pts = generate_adc_polygon(ego_position, ego_heading)
         ego_polygon = Polygon([[x.x, x.y] for x in ego_pts])
-        pending_removal_boundary_ids = set()
-        for index, bid in enumerate(self.searchable_boundary_ids):
-            distance = ego_polygon.distance(self.boundaries[bid])
-            if distance == 0:
-                # intersection found
-                features = self.get_basic_info_from_localization(message)
-                features['boundary_id'] = self.boundary_ids.index(bid)
-                if features["speed"] > 0:
-                    self.__data.append((True, t, bid, features))
-                    self.cached_data[(position.x, position.y)] = bid
-                else:
-                    self.__data.append((False, t, '', {}))
+
+        ego_lanes = self.map_service.get_veh_current_lane(ego_pose)
+        if len(ego_lanes) == 0:
+            self.__data.append((False, t, '', {}))
+            return
+
+        if features['speed'] == 0:
+            self.__data.append((False, t, '', {}))
+            return
+
+        for lane in ego_lanes:
+            lb, rb = self.map_service.get_lane_boundaries_by_id(lane.id)
+            if not lb.intersects(ego_polygon) and not rb.intersects(ego_polygon):
+                self.__data.append((False, t, '', {}))
                 return
-            if distance > UnsafeLaneChange.PRUNE_DISTANCE:
-                pending_removal_boundary_ids.add(bid)
-        self.searchable_boundary_ids = self.searchable_boundary_ids - pending_removal_boundary_ids
-        # no intersection
-        self.__data.append((False, t, '', {}))
-        self.cached_data[(position.x, position.y)] = ''
+
+        lb_1, rb_1 = self.map_service.get_lane_boundaries_by_id(ego_lanes[0].id)
+        if lb_1.intersects(ego_polygon):
+            bid = self.map_service.get_lane_by_id(ego_lanes[0].id).leftBound.id
+        else:
+            bid = self.map_service.get_lane_by_id(ego_lanes[0].id).rightBound.id
+
+        features['boundary_id'] = bid
+        self.__data.append((True, t, bid, features))
 
     def get_interested_topics(self) -> List[str]:
         return ["/localization/kinematic_state"]
@@ -108,4 +100,5 @@ class UnsafeLaneChange(BasicMetric):
         return violations
 
     def get_fitness(self):
+        assert self.fitness is not None, "Fitness is not calculated yet."
         return self.fitness
