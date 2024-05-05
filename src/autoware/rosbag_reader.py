@@ -20,7 +20,7 @@ class ROSBagReader:
         self.sql_connection = sqlite3.connect(db3_path)
         self.sql_cursor = self.sql_connection.cursor()
         self.db3_path = db3_path
-
+        self.yaml = None
         # create a message type map
         topics_data = self.sql_cursor.execute("SELECT id, name, type FROM topics").fetchall()
         self.topic_type = {name_of: type_of for id_of, name_of, type_of in topics_data}
