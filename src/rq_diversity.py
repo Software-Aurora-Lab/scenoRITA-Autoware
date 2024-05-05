@@ -204,9 +204,10 @@ if __name__ == "__main__":
 
     exp_records = [
         ("Shalun with road shoulders", scenoRITA_shalun_path, "scenoRITA"),
-        ("Nishi-Shinjuku", scenoRITA_nishi_path, "scenoRITA"),
-        ("Hsinchu city (Taiwan)", scenoRITA_hsinchu_path, "scenoRITA")
+        # ("Nishi-Shinjuku", scenoRITA_nishi_path, "scenoRITA"),
+        # ("Hsinchu city (Taiwan)", scenoRITA_hsinchu_path, "scenoRITA")
     ]
+    # todo: draw one by one
 
     for map_name, record_root, approach_name in exp_records:
         if record_root != "" and record_root.exists():
