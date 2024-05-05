@@ -68,6 +68,95 @@ def localization_msgs(record_root: Path):
         )
         pool.close()
 
+def compute_coverage_reduce(map_name: str, record_root: Path):
+    ego_lsts_files = sorted(record_root.rglob("ego_lst.pkl"))
+    ego_lane_files = sorted(record_root.rglob("ego_lanes.pkl"))
+
+    map_service = load_map_service(map_name)
+
+    # initialize junction polygons, signal lines and stop sign lines
+    junction_polygons: Dict[str, Polygon] = dict()
+    signal_lines: Dict[str, LineString] = dict()
+    unique_signal_lines: Set[LineString] = set()
+    stop_sign_lines: Dict[str, LineString] = dict()
+    unique_stop_sign_lines: Set[LineString] = set()
+
+    # Build junction polygons, signal lines and stop sign lines
+    for junction_id in map_service.get_junction_lanes():
+        junction = map_service.get_lane_by_id(junction_id)
+        junction_polygon = Polygon([(x.x, x.y) for x in junction.polygon2d()])
+        junction_polygons[junction_id] = junction_polygon
+
+    for signal in map_service.get_signals():
+        assert len(signal.parameters['ref_line']) == 1
+        signal_linestring = LineString(
+            [(x.x, x.y) for x in signal.parameters['ref_line'][0]]
+        )
+        if signal_linestring not in unique_signal_lines:
+            unique_signal_lines.add(signal_linestring)
+            signal_lines[signal.id] = signal_linestring
+        else:
+            logger.warning(f"Duplicate signal {signal.id}")
+
+    for stop_sign_ref_line in map_service.get_stop_signs():
+        stop_sign_linestring = LineString(
+            [(x.x, x.y) for x in stop_sign_ref_line]
+        )
+        if stop_sign_linestring not in unique_stop_sign_lines:
+            unique_stop_sign_lines.add(stop_sign_linestring)
+            stop_sign_lines[stop_sign_ref_line.id] = stop_sign_linestring
+        else:
+            logger.warning(f"Duplicate stop sign {stop_sign_ref_line.id}")
+
+    # initialize coverage dictionaries
+    junction_coverage: Dict[str, int] = dict()
+    signal_coverage: Dict[str, int] = dict()
+    stop_sign_coverage: Dict[str, int] = dict()
+
+    # compute coverage for each record
+    for index, record_file in enumerate(ego_lsts_files):
+        logger.info(f"Processing {record_file.parent.name} ({index + 1}/{len(ego_lsts_files)})")
+
+        ego_lanes: Set[int] = pickle.load(ego_lane_files[index].open("rb"))
+        ego_lst = pickle.load(record_file.open("rb"))
+
+        # compute coverage for junctions, signals and stop signs
+        for junction_id, junction_polygon in junction_polygons.items():
+            if junction_polygon.intersects(ego_lst):
+                if junction_id not in junction_coverage:
+                    junction_coverage[junction_id] = 1
+                else:
+                    junction_coverage[junction_id] += 1
+
+        for signal_id, signal_linestring in signal_lines.items():
+            if signal_linestring.intersects(ego_lst):
+                # signal_overlap_ids = [
+                #     x.id for x in map_service.signal_table[signal_id].overlap_id
+                # ]
+                if set(ego_lanes) & set(signal_lines.keys()):
+                    if signal_id not in signal_coverage:
+                        signal_coverage[signal_id] = 1
+                    else:
+                        signal_coverage[signal_id] += 1
+
+        for stop_sign_id, stop_sign_linestring in stop_sign_lines.items():
+            if stop_sign_linestring.intersects(ego_lst):
+                # stop_sign_overlap_ids = [
+                #     x.id for x in map_service.stop_sign_table[stop_sign_id].overlap_id
+                # ]
+                if set(ego_lanes) & set(stop_sign_lines.keys()):
+                    if stop_sign_id not in stop_sign_coverage:
+                        stop_sign_coverage[stop_sign_id] = 1
+                    else:
+                        stop_sign_coverage[stop_sign_id] += 1
+
+    # print coverage results
+    print(f"Number of junctions: {len(junction_polygons)}")
+    print(f"Number of junctions covered: {len(junction_coverage)}")
+    print(f"Number of signals: {len(signal_lines)}")
+    print(f"Number of signals covered: {len(signal_coverage)}")
+    print(f"Number of stop signs: {len(stop_sign_lines)}")
+    print(f"Number of stop signs covered: {len(stop_sign_coverage)}")
 
 def compute_coverage(map_name: str, record_root: Path):
     record_files = sorted(record_root.rglob("*.db3"))
