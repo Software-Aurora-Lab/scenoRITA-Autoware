@@ -4,7 +4,7 @@ from math import atan2
 from typing import Dict, List, Tuple, Optional, Set
 
 import lanelet2 as ll2
-from lanelet2.core import LaneletMap, Lanelet, ConstLanelet
+from lanelet2.core import LaneletMap, Lanelet, ConstLanelet, ConstLineString3d
 from lanelet2.io import Origin, load
 from lanelet2.routing import RoutingGraph, LaneletPath
 from lanelet2 import traffic_rules
@@ -389,6 +389,9 @@ class MapService:
 
     def get_stop_lines(self):
         return query.stopLinesLanelets(self.ll_map.laneletLayer)
+
+    def get_stop_signs(self) -> List[ConstLineString3d]:
+        return query.stopSignStopLines(self.ll_map.laneletLayer)
 
 
 class LaneSubtype(Enum):
