@@ -89,7 +89,7 @@ class LogParser:
 
                 group_dict = match.groupdict()
                 msg_time = datetime(
-                    year=2023,
+                    year=2024,
                     month=int(group_dict["month"]),
                     day=int(group_dict["day"]),
                     hour=int(group_dict["hour"]),
