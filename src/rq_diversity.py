@@ -155,6 +155,7 @@ def plot_experiment_heatmap(map_name: str, record_root: Path, output_path: Path)
 
     # save figure
     plt.savefig(output_path, bbox_inches="tight")
+    del map_service
 
 def check_routing_msgs(root: Path) -> None:
     records_meta_data = list(root.rglob("metadata.yaml"))
