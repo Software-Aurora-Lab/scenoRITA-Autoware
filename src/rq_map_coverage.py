@@ -64,7 +64,7 @@ def localization_msgs(record_root: Path):
 
         pool.starmap(
             store_localization_msg,
-            [task_queue for _ in range(worker_num)],
+            [(task_queue,) for _ in range(worker_num)],
         )
         pool.close()
 
