@@ -23,7 +23,7 @@ def store_localization_msg(
             break
         logger.info(f"Processing {record_path[2].name}")
         ego_coordinates: Set[Tuple[float, float]] = set()
-        record = ROSBagReader(str(record_path))
+        record = ROSBagReader(str(record_path[2]))
         if not record.has_routing_msg():
             logger.warning(f"Record {record_path[2].name} does not have routing message")
             return
@@ -37,15 +37,16 @@ def store_localization_msg(
             e_lanes = map_service.get_veh_current_lanelets(
                 msg.pose.pose.position
             )
-            ego_lanes = ego_lanes.union(e_lanes)
+            e_lanes_id = [ll.id for ll in e_lanes]
+            ego_lanes = ego_lanes.union(e_lanes_id)
         if len(ego_coordinates) < 2:
-            logger.warning(f"Record {record_path.name} has less than 2 coordinates")
+            logger.warning(f"Record {record_path[2].name} has less than 2 coordinates")
             return []
         ego_lst = LineString(ego_coordinates)
-        with open(record_path / "ego_lst.pkl", "wb") as f:
+        with open(record_path[2] / "ego_lst.pkl", "wb") as f:
             pickle.dump(ego_lst, f)
 
-        with open(record_path / "ego_lanes.pkl", "wb") as f:
+        with open(record_path[2] / "ego_lanes.pkl", "wb") as f:
             pickle.dump(ego_lanes, f)
         logger.info(f"Finished {record_path[2].name}")
 
@@ -53,6 +54,7 @@ def store_localization_msg(
 def localization_msgs(record_root: Path, map_name: str):
     map_service = load_map_service(map_name)
     records_fp = list(record_root.rglob("*.db3"))
+    records_fp = [_.parent for _ in records_fp]
     with mp.Manager() as manager:
         worker_num = mp.cpu_count()
         pool = mp.Pool(worker_num)
@@ -71,6 +73,7 @@ def localization_msgs(record_root: Path, map_name: str):
 
 def compute_coverage(map_name: str, record_root: Path):
     record_files = sorted(record_root.rglob("*.db3"))
+    record_files = [_.parent for _ in record_files]
     map_service = load_map_service(map_name)
 
     # initialize junction polygons, signal lines and stop sign lines
@@ -203,6 +206,7 @@ if __name__ == "__main__":
     for map_name, record_root, approach_name in exp_records:
         if record_root != "" and Path(record_root).exists():
             start = time.perf_counter()
-            compute_coverage(map_name, Path(record_root))
+            # compute_coverage(map_name, Path(record_root))
+            localization_msgs(record_root, map_name)
             minutes = (time.perf_counter() - start) / 60
             logger.info(f"Finished {map_name} {approach_name} in {minutes:.2f} minutes")
