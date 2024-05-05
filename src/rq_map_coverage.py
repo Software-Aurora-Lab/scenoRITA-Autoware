@@ -14,8 +14,7 @@ import pickle
 
 
 def store_localization_msg(
-        task_queue: "mp.Queue[Optional[Tuple[int, int, Path]]]",
-        map_service
+        task_queue: "mp.Queue[Optional[Tuple[int, int, Path]]]"
 ):
     while True:
         record_path = task_queue.get()
@@ -51,8 +50,7 @@ def store_localization_msg(
         logger.info(f"Finished {record_path[2].name}")
 
 
-def localization_msgs(record_root: Path, map_name: str):
-    map_service = load_map_service(map_name)
+def localization_msgs(record_root: Path):
     records_fp = list(record_root.rglob("*.db3"))
     records_fp = [_.parent for _ in records_fp]
     with mp.Manager() as manager:
@@ -66,7 +64,7 @@ def localization_msgs(record_root: Path, map_name: str):
 
         pool.starmap(
             store_localization_msg,
-            [(task_queue, map_service) for _ in range(worker_num)],
+            [task_queue for _ in range(worker_num)],
         )
         pool.close()
 
@@ -206,7 +204,8 @@ if __name__ == "__main__":
     for map_name, record_root, approach_name in exp_records:
         if record_root != "" and Path(record_root).exists():
             start = time.perf_counter()
+            map_service = load_map_service(map_name)
             # compute_coverage(map_name, Path(record_root))
-            localization_msgs(record_root, map_name)
+            localization_msgs(record_root)
             minutes = (time.perf_counter() - start) / 60
             logger.info(f"Finished {map_name} {approach_name} in {minutes:.2f} minutes")
