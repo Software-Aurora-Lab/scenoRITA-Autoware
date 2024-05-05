@@ -29,8 +29,9 @@ def compute_coverage(map_name: str, record_root: Path):
         junction_polygons[junction_id] = junction_polygon
 
     for signal in map_service.get_signals():
+        assert len(signal.parameters['ref_line']) == 1
         signal_linestring = LineString(
-            [(x.x, x.y) for x in signal.parameters['ref_line']]
+            [(x.x, x.y) for x in signal.parameters['ref_line'][0]]
         )
         if signal_linestring not in unique_signal_lines:
             unique_signal_lines.add(signal_linestring)
