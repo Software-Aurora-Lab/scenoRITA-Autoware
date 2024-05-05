@@ -1,7 +1,7 @@
 import time
 import multiprocessing as mp
 from pathlib import Path
-from typing import Dict, Set, Tuple
+from typing import Dict, Set, Tuple, Optional
 
 from loguru import logger
 from nav_msgs.msg import Odometry
@@ -13,43 +13,60 @@ from config import PROJECT_ROOT
 import pickle
 
 
-def analysis_worker(record_path: Path, map_service):
-    ego_coordinates: Set[Tuple[float, float]] = set()
-    logger.info(f"Processing {record_path.name}")
-    record = ROSBagReader(str(record_path))
-    if not record.has_routing_msg():
-        logger.warning(f"Record {record_path.name} does not have routing message")
-        return []
-    ego_lanes: Set[int] = set()
+def store_localization_msg(
+        task_queue: "mp.Queue[Optional[Tuple[int, int, Path]]]",
+        map_service
+):
+    while True:
+        record_path = task_queue.get()
+        if record_path is None:
+            break
+        logger.info(f"Processing {record_path[2].name}")
+        ego_coordinates: Set[Tuple[float, float]] = set()
+        record = ROSBagReader(str(record_path))
+        if not record.has_routing_msg():
+            logger.warning(f"Record {record_path[2].name} does not have routing message")
+            return
+        ego_lanes: Set[int] = set()
 
-    for topic, msg, t in record.read_specific_messages("/localization/kinematic_state"):
-        ego_coord = (msg.pose.pose.position.x, msg.pose.pose.position.y)
-        if ego_coord == (0.0, 0.0):
-            continue
-        ego_coordinates.add(ego_coord)
-        e_lanes = map_service.get_veh_current_lanelets(
-            msg.pose.pose.position
+        for topic, msg, t in record.read_specific_messages("/localization/kinematic_state"):
+            ego_coord = (msg.pose.pose.position.x, msg.pose.pose.position.y)
+            if ego_coord == (0.0, 0.0):
+                continue
+            ego_coordinates.add(ego_coord)
+            e_lanes = map_service.get_veh_current_lanelets(
+                msg.pose.pose.position
+            )
+            ego_lanes = ego_lanes.union(e_lanes)
+        if len(ego_coordinates) < 2:
+            logger.warning(f"Record {record_path.name} has less than 2 coordinates")
+            return []
+        ego_lst = LineString(ego_coordinates)
+        with open(record_path / "ego_lst.pkl", "wb") as f:
+            pickle.dump(ego_lst, f)
+
+        with open(record_path / "ego_lanes.pkl", "wb") as f:
+            pickle.dump(ego_lanes, f)
+        logger.info(f"Finished {record_path[2].name}")
+
+
+def localization_msgs(record_root: Path, map_name: str):
+    map_service = load_map_service(map_name)
+    records_fp = list(record_root.rglob("*.db3"))
+    with mp.Manager() as manager:
+        worker_num = mp.cpu_count()
+        pool = mp.Pool(worker_num)
+        task_queue = manager.Queue()
+        for index, rc_fp in enumerate(records_fp):
+            task_queue.put((0, index, rc_fp))
+        for _ in range(worker_num):
+            task_queue.put(None)
+
+        pool.starmap(
+            store_localization_msg,
+            [(task_queue, map_service) for _ in range(worker_num)],
         )
-        ego_lanes = ego_lanes.union(e_lanes)
-    if len(ego_coordinates) < 2:
-        logger.warning(f"Record {record_path.name} has less than 2 coordinates")
-        return []
-    ego_lst = LineString(ego_coordinates)
-    with open(record_path / "ego_lst.pkl", "wb") as f:
-        pickle.dump(ego_lst, f)
-
-    with open(record_path / "ego_lanes.pkl", "wb") as f:
-        pickle.dump(ego_lanes, f)
-
-
-def generator_adapter(generator):
-    for g in generator:
-        yield g.parent
-
-
-def localization_msgs(record_root: Path):
-    with mp.Pool(mp.cpu_count()) as pool:
-        pool.map(analysis_worker, generator_adapter(record_root.rglob("*.db3")))
+        pool.close()
 
 
 def compute_coverage(map_name: str, record_root: Path):
@@ -123,9 +140,9 @@ def compute_coverage(map_name: str, record_root: Path):
 
         # ego_lane_overlap_ids: Set[str] = set()
         # for el in ego_lanes:
-            # ego_lane_overlap_ids |= set(
-            #     [x.id for x in map_service.lane_table[el].overlap_id]
-            # )
+        # ego_lane_overlap_ids |= set(
+        #     [x.id for x in map_service.lane_table[el].overlap_id]
+        # )
 
         # compute coverage for junctions, signals and stop signs
         for junction_id, junction_polygon in junction_polygons.items():
