@@ -1,4 +1,5 @@
 import time
+import multiprocessing as mp
 from pathlib import Path
 from typing import Dict, Set, Tuple
 
@@ -9,6 +10,46 @@ from autoware.rosbag_reader import ROSBagReader
 
 from autoware.map_service import load_map_service
 from config import PROJECT_ROOT
+import pickle
+
+
+def analysis_worker(record_path: Path, map_service):
+    ego_coordinates: Set[Tuple[float, float]] = set()
+    logger.info(f"Processing {record_path.name}")
+    record = ROSBagReader(str(record_path))
+    if not record.has_routing_msg():
+        logger.warning(f"Record {record_path.name} does not have routing message")
+        return []
+    ego_lanes: Set[int] = set()
+
+    for topic, msg, t in record.read_specific_messages("/localization/kinematic_state"):
+        ego_coord = (msg.pose.pose.position.x, msg.pose.pose.position.y)
+        if ego_coord == (0.0, 0.0):
+            continue
+        ego_coordinates.add(ego_coord)
+        e_lanes = map_service.get_veh_current_lanelets(
+            msg.pose.pose.position
+        )
+        ego_lanes = ego_lanes.union(e_lanes)
+    if len(ego_coordinates) < 2:
+        logger.warning(f"Record {record_path.name} has less than 2 coordinates")
+        return []
+    ego_lst = LineString(ego_coordinates)
+    with open(record_path / "ego_lst.pkl", "wb") as f:
+        pickle.dump(ego_lst, f)
+
+    with open(record_path / "ego_lanes.pkl", "wb") as f:
+        pickle.dump(ego_lanes, f)
+
+
+def generator_adapter(generator):
+    for g in generator:
+        yield g.parent
+
+
+def localization_msgs(record_root: Path):
+    with mp.Pool(mp.cpu_count()) as pool:
+        pool.map(analysis_worker, generator_adapter(record_root.rglob("*.db3")))
 
 
 def compute_coverage(map_name: str, record_root: Path):
@@ -71,10 +112,10 @@ def compute_coverage(map_name: str, record_root: Path):
             if ego_coord == (0.0, 0.0):
                 continue
             ego_coordinates.add(ego_coord)
-            ego_lane = map_service.get_veh_current_lanelets(
+            e_lanes = map_service.get_veh_current_lanelets(
                 msg.pose.pose.position
             )
-            ego_lanes.add(ego_lane[0])
+            ego_lanes = ego_lanes.union(e_lanes)
         if len(ego_coordinates) < 2:
             logger.warning(f"Record {record_file.name} has less than 2 coordinates")
             continue
