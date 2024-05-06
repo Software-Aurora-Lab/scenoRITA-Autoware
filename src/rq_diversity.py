@@ -2,10 +2,11 @@ import multiprocessing as mp
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Set, Tuple
+from typing import Set, Tuple, List
 
 import matplotlib as mpl
 import numpy as np
+import pandas as pd
 from autoware_auto_perception_msgs.msg import TrackedObjects, TrackedObject
 from nav_msgs.msg import Odometry
 
@@ -14,6 +15,7 @@ from loguru import logger
 from matplotlib import pyplot as plt
 
 from autoware.map_service import load_map_service
+from autoware.rq_utils import get_routing_msg
 from config import PROJECT_ROOT
 
 mpl.rcParams["figure.dpi"] = 900
@@ -153,37 +155,67 @@ def plot_experiment_heatmap(map_name: str, record_root: Path, output_path: Path)
 
     # save figure
     plt.savefig(output_path, bbox_inches="tight")
+    del map_service
+
+def check_routing_msgs(root: Path) -> None:
+    records_meta_data = list(root.rglob("metadata.yaml"))
+    with mp.Manager() as manager:
+        worker_num = mp.cpu_count()
+        pool = mp.Pool(worker_num)
+        task_queue = manager.Queue()
+        result_queue = manager.Queue()
+        for index, meta_data_pth in enumerate(records_meta_data):
+            task_queue.put((0, index, meta_data_pth))
+        for _ in range(worker_num):
+            task_queue.put(None)
+
+        pool.starmap(
+            get_routing_msg,
+            [(task_queue, result_queue) for _ in range(worker_num)],
+        )
+        pool.close()
+
+        results: List[Tuple[str, int]] = []
+        while not result_queue.empty():
+            results.append(result_queue.get())
+
+        sorted(results, key=lambda x: x[0])
+        rr = list()
+        for r in results:
+            if r[1] == 0:
+                logger.error(f"Scenario {r[0]} has no routing messages")
+                rr.append([r[0], False])
+            else:
+                rr.append([r[0], True])
+
+        pd.DataFrame(rr, columns=["scenario", "routing_msgs"]).to_csv(Path(root, "routing_msgs.csv"), index=False)
 
 
 if __name__ == "__main__":
-    # avfuzzer_path = (
-    #     "/home/yuqi/Desktop/Major_Revision/AV-FUZZER/12hr_1/simulation/records"
-    # )
-    # autofuzz_path = "/home/yuqi/Desktop/Major_Revision/AutoFuzz/1hr_1"
-    #
-    # scenoRITA_sf_path = (
-    #     "/home/yuqi/ResearchWorkspace/scenoRITA-V3/out/0507_165932_san_francisco"
-    # )
-    # scenoRITA_ba_path = (
-    #     "/home/yuqi/ResearchWorkspace/scenoRITA-V3/out/0424_213748_borregas_ave"
-    # )
-    custom_folder = ""  # todo:
-    assert custom_folder is not None, "Please specify the custom folder"
-    ytu_path = Path(PROJECT_ROOT, "out", custom_folder)
+    scenoRITA_shalun_path = Path(
+        fr"{PROJECT_ROOT}/out/0503_155808_Shalun with road shoulders/records"
+    )
+    scenoRITA_nishi_path = Path(
+        fr"{PROJECT_ROOT}/out/0504_055929_Nishi-Shinjuku/records"
+    )
+    scenoRITA_hsinchu_path = Path(
+        fr"{PROJECT_ROOT}/out/0503_024541_Hsinchu city (Taiwan)/records"
+    )
 
     exp_records = [
-        # ("san_francisco", avfuzzer_path, "avfuzzer"),
-        # ("borregas_ave", autofuzz_path, "autofuzz"),
-        ("", ytu_path, "scenoRITA"),  # todo:
-        # ("borregas_ave", scenoRITA_ba_path, "scenoRITA"),
+        ("Shalun with road shoulders", scenoRITA_shalun_path, "scenoRITA"),
+        # ("Nishi-Shinjuku", scenoRITA_nishi_path, "scenoRITA"),
+        # ("Hsinchu city (Taiwan)", scenoRITA_hsinchu_path, "scenoRITA")
     ]
+    # todo: draw one by one
 
     for map_name, record_root, approach_name in exp_records:
-        if record_root != "" and Path(record_root).exists():
+        if record_root != "" and record_root.exists():
             start = time.perf_counter()
             logger.info(f"Plotting {map_name} {approach_name}")
             plot_experiment_heatmap(
-                map_name, Path(record_root), Path(record_root, f"{custom_folder}_{approach_name}.png")
+                map_name, record_root, Path(record_root, f"{record_root.parent.name}_{approach_name}.png")
             )
+            check_routing_msgs(record_root)
             minutes = (time.perf_counter() - start) / 60
             logger.info(f"Finished {map_name} {approach_name} in {minutes:.2f} minutes")

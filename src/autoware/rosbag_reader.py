@@ -3,8 +3,10 @@ import os
 import glob
 from collections import defaultdict
 
+import yaml
 from rosidl_runtime_py.utilities import get_message
 from rclpy.serialization import deserialize_message
+from yaml import SafeLoader
 
 
 class ROSBagReader:
@@ -13,11 +15,12 @@ class ROSBagReader:
         self.bag_dir_path = bag_dir_path
 
         db3_path = self.get_file_path("db3")
+        self.yaml_path = self.get_file_path("yaml")
 
         self.sql_connection = sqlite3.connect(db3_path)
         self.sql_cursor = self.sql_connection.cursor()
         self.db3_path = db3_path
-
+        self.yaml = None
         # create a message type map
         topics_data = self.sql_cursor.execute("SELECT id, name, type FROM topics").fetchall()
         self.topic_type = {name_of: type_of for id_of, name_of, type_of in topics_data}
@@ -59,6 +62,22 @@ class ROSBagReader:
                 msg = self.deserialize_msg(message, topic)
                 topic_data_list.append((topic, msg, t))
         return topic_data_list
+
+    def get_duration(self):
+        if not self.yaml:
+            self.read_yaml()
+        return self.yaml['rosbag2_bagfile_information']['duration']['nanoseconds']
+
+    def read_yaml(self):
+        self.yaml = yaml.load(open(self.yaml_path, 'r'), Loader=SafeLoader)
+
+    def has_routing_msg(self):
+        if not self.yaml:
+            self.read_yaml()
+        tp_msgs = self.yaml['rosbag2_bagfile_information']['topics_with_message_count']
+        for tm in tp_msgs:
+            if tm['topic_metadata']['name'] == '/planning/mission_planning/route':
+                return tm['message_count'] > 0
 
     def get_messages(self, topic_name: str):
         topic_id = self.topic_id[topic_name]
