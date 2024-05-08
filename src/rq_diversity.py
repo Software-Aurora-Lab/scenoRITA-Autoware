@@ -2,7 +2,7 @@ import multiprocessing as mp
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Set, Tuple, List
+from typing import Set, Tuple
 
 import matplotlib as mpl
 import numpy as np
@@ -157,8 +157,14 @@ def plot_experiment_heatmap(map_name: str, record_root: Path, output_path: Path)
     plt.savefig(output_path, bbox_inches="tight")
     del map_service
 
+
 def check_routing_msgs(root: Path) -> None:
     records_meta_data = list(root.rglob("metadata.yaml"))
+    import re
+
+    def extract_numbers(s):
+        return tuple(int(num) for num in re.findall(r'\d+', s))
+
     with mp.Manager() as manager:
         worker_num = mp.cpu_count()
         pool = mp.Pool(worker_num)
@@ -174,21 +180,16 @@ def check_routing_msgs(root: Path) -> None:
             [(task_queue, result_queue) for _ in range(worker_num)],
         )
         pool.close()
+        pool.join()
 
-        results: List[Tuple[str, int]] = []
+        results = []
         while not result_queue.empty():
             results.append(result_queue.get())
 
-        sorted(results, key=lambda x: x[0])
-        rr = list()
-        for r in results:
-            if r[1] == 0:
-                logger.error(f"Scenario {r[0]} has no routing messages")
-                rr.append([r[0], False])
-            else:
-                rr.append([r[0], True])
+        results = sorted(results, key=lambda x: extract_numbers(x[0]))
 
-        pd.DataFrame(rr, columns=["scenario", "routing_msgs"]).to_csv(Path(root, "routing_msgs.csv"), index=False)
+        pd.DataFrame(results, columns=["scenario", "acceleration", "localization", "ground_truth", "perception",
+                                       "routing"]).to_csv(Path(root, "msgs.csv"), index=False)
 
 
 if __name__ == "__main__":
@@ -202,9 +203,14 @@ if __name__ == "__main__":
         fr"{PROJECT_ROOT}/out/0503_024541_Hsinchu city (Taiwan)/records"
     )
 
+    scenoRITA_nishi_path_2 = Path(
+        fr"{PROJECT_ROOT}/out/0505_232108_Nishi-Shinjuku/records"
+    )
+
     exp_records = [
         ("Shalun with road shoulders", scenoRITA_shalun_path, "scenoRITA"),
         # ("Nishi-Shinjuku", scenoRITA_nishi_path, "scenoRITA"),
+        # ("Nishi-Shinjuku", scenoRITA_nishi_path_2, "scenoRITA"),
         # ("Hsinchu city (Taiwan)", scenoRITA_hsinchu_path, "scenoRITA")
     ]
     # todo: draw one by one
@@ -213,9 +219,9 @@ if __name__ == "__main__":
         if record_root != "" and record_root.exists():
             start = time.perf_counter()
             logger.info(f"Plotting {map_name} {approach_name}")
-            plot_experiment_heatmap(
-                map_name, record_root, Path(record_root, f"{record_root.parent.name}_{approach_name}.png")
-            )
+            # plot_experiment_heatmap(
+            #     map_name, record_root, Path(record_root, f"{record_root.parent.name}_{approach_name}.png")
+            # )
             check_routing_msgs(record_root)
             minutes = (time.perf_counter() - start) / 60
             logger.info(f"Finished {map_name} {approach_name} in {minutes:.2f} minutes")
