@@ -1,5 +1,4 @@
 import os
-import string
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -7,18 +6,13 @@ from pathlib import Path
 from absl import flags
 from absl.flags import FLAGS
 from loguru import logger
-from nanoid import generate
 
 from config import LOGGING_FORMAT, PROJECT_NAME, PROJECT_ROOT
 
 
-def generate_id(size=5):
-    return generate(string.ascii_letters, size=size)
-
-
 def set_up_gflags():
     # Execution flags
-    flags.DEFINE_string("map", "Gebze (Turkey)", "Name of the map to use.")  # todo:
+    flags.DEFINE_string("map", "Nishi-Shinjuku", "Name of the map to use.")
     flags.DEFINE_boolean("dry_run", os.uname()[0] != "Linux", "Dry run mode.")
     flags.DEFINE_string(
         "execution_id", datetime.now().strftime(r"%m%d_%H%M%S"), "Execution ID."
@@ -27,8 +21,8 @@ def set_up_gflags():
     flags.DEFINE_string("log_level", "INFO", "Log level.")
 
     # Genetic algorithm flags
-    flags.DEFINE_integer("num_scenario", 9, "Number of scenarios to generate.")  # todo
-    flags.DEFINE_float("num_hour", 10.0, "Number of hours to generate scenarios for.")  # todo:
+    flags.DEFINE_integer("num_scenario", 20, "Number of scenarios to generate.")
+    flags.DEFINE_float("num_hour", 8.0, "Number of hours to generate scenarios for.")
     flags.DEFINE_integer("min_obs", 5, "Minimum number of obstacles.")
     flags.DEFINE_integer("max_obs", 15, "Maximum number of obstacles.")
 
