@@ -9,7 +9,7 @@ src/test.py
 .vscode/
 tests/output/*
 .idea/
-
+data/autoware_maps/
 # Created by https://www.toptal.com/developers/gitignore/api/python,macos,visualstudiocode,linux
 # Edit at https://www.toptal.com/developers/gitignore?templates=python,macos,visualstudiocode,linux
 
