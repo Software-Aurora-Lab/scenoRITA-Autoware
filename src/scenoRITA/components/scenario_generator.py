@@ -6,7 +6,6 @@ from shapely.geometry import Point, Polygon
 
 from autoware.map_service import MapService
 from geometry_msgs.msg import Point
-from loguru import logger
 
 from autoware.open_scenario import OpenScenario
 from autoware.utils import generate_adc_polygon, generate_polygon, get_s_from_start_lst, get_rounded_rand, \
@@ -92,8 +91,6 @@ class ScenarioGenerator:
                     initial_lane_id = random.choice(list(self.obs_avail_lids[_t]))
                 else:
                     initial_lane_id = random.choice(list(candidate_lanes))
-                # if initial_lane_id not in self.obs_avail_lids[_t]:
-                #     logger.info("Initial lane id is not valid, randomly choosing a new one {}", initial_lane_id)
 
             reachable_lanes_wo_lc = self.map_service.get_reachable_descendants(initial_lane_id,
                                                                                _t, allow_lane_change=False)
@@ -111,7 +108,7 @@ class ScenarioGenerator:
                     final_lane_id
                 )
                 final_xes, _ = final_central_curve.xy
-                final_index = random.randint(0, len(final_xes) - 2)
+                final_index = random.randint(0, len(final_xes) - 2) # fixme: if the final lane is the same as the initial lane, the final index should be greater than the initial index
 
                 return (
                     ObstaclePosition(initial_lane_id, initial_index,
