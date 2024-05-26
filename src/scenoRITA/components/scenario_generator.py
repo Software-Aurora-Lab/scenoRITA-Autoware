@@ -235,14 +235,37 @@ class ScenarioGenerator:
                     junction_lanes.remove(chosen_junction_lane)
                     continue
 
-                final_lane_id = random.choice(successors)
-                final_lane_cg_neighbours = self.map_service.get_changable_neighbours(final_lane_id)
-                if len(final_lane_cg_neighbours) != 0:
-                    if random.random() < 0.8:
-                        # print("randomly choosing a lane from the changeable neighbours")
-                        candidate = random.choice(final_lane_cg_neighbours)
-                        if self.map_service.get_length_of_lane(candidate) >= k_min_lane_length:
-                            final_lane_id = candidate
+                final_lane_id = -1
+                need_to_cut = True
+                while True:
+                    if len(successors) == 0:
+                        break
+                    final_lane_id = random.choice(successors)
+                    final_lane_cg_neighbours = self.map_service.get_changable_neighbours(final_lane_id)
+                    if len(final_lane_cg_neighbours) != 0:
+                        if random.random() < 0.8:
+                            # print("randomly choosing a lane from the changeable neighbours")
+                            candidate = random.choice(final_lane_cg_neighbours)
+                            if self.map_service.get_length_of_lane(candidate) >= k_min_lane_length:
+                                final_lane_id = candidate
+                    # out of lanes condition
+                    if self.map_service.get_length_of_lane(final_lane_id) - 6.0 <= 0:
+                        if len(self.map_service.get_successors_for_lane(final_lane_id)) > 0:
+                            need_to_cut = False
+                            break
+                        else:
+                            successors.remove(final_lane_id)  # remove this candidate, out of lanes
+                    else:
+                        if len(self.map_service.get_successors_for_lane(final_lane_id)) > 0:
+                            need_to_cut = False  # no need to cut since there is another successor lane
+                        else:
+                            need_to_cut = True  # need to cut since there is no other successor lane
+                        break
+
+                if len(successors) == 0 or final_lane_id == -1:
+                    # if no successors in list, then continue to another loop; may cause infinite loop if unlucky?
+                    # the second condition is not necessary
+                    continue
 
                 # assert initial_lane_id != -1
                 initial_lane_length = self.map_service.get_length_of_lane(
@@ -254,7 +277,7 @@ class ScenarioGenerator:
                     ),
                     PositionEstimate(
                         final_lane_id,
-                        self.map_service.get_length_of_lane(final_lane_id),
+                        self.map_service.get_length_of_lane(final_lane_id) - 6 if need_to_cut else self.map_service.get_length_of_lane(final_lane_id),
                     ),
                 )
         else:
@@ -263,15 +286,32 @@ class ScenarioGenerator:
                 lane_id = random.choice(options)
                 lane_length = self.map_service.get_length_of_lane(lane_id)
                 descendants = self.map_service.get_reachable_descendants(lane_id)
-                if len(descendants) > 0:
+                need_to_cut = True
+                target_lane_id = -1
+                while len(descendants) > 0:
                     target_lane_id = random.choice(list(descendants))
+                    if self.map_service.get_length_of_lane(target_lane_id) - 6.0 <= 0:
+                        if len(self.map_service.get_successors_for_lane(target_lane_id)) > 0:
+                            need_to_cut = False
+                            break
+                        else:
+                            target_lane_id = -1
+                            descendants.remove(target_lane_id)  # remove this candidate, out of lanes
+                    else:
+                        if len(self.map_service.get_successors_for_lane(target_lane_id)) > 0:
+                            need_to_cut = False  # no need to cut since there is another successor lane
+                            break
+                        else:
+                            need_to_cut = True  # need to cut since there is no other successor lane
+                            break
+                if target_lane_id != -1:
                     return EgoCar(
                         PositionEstimate(
                             lane_id, min(1.5, lane_length)
                         ),  # at the end of the lane
                         PositionEstimate(
                             target_lane_id,
-                            self.map_service.get_length_of_lane(target_lane_id),
+                            self.map_service.get_length_of_lane(target_lane_id) - 6.0 if need_to_cut else self.map_service.get_length_of_lane(target_lane_id),
                         ),
                     )
                 options.remove(lane_id)  # if this lane cannot reach any other lane, remove it from the options
