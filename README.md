@@ -91,12 +91,19 @@ This is an implementation of scenoRITA that supports Autoware Universe v1.0.
 
 ## Running scenoRITA for Autoware
 
-1. Install project dependencies via command
+1. Install project dependencies via command (if you haven't done it before)
    ```
    poetry install
    ```
 
-2. Run scenoRITA via command
+2. source environments, please note that you need to source the file based on your terminal (bash, zsh, etc.). For example, if you are using bash, you can run the following commands:
+   ```bash
+   source /path/to/ros/humble/setup.bash
+   source /path/to/reduced_autoware/install/setup.bash
+   ```
+   
+
+3. Run scenoRITA via command
    ```
    poetry run python3 src/main.py
    ```
