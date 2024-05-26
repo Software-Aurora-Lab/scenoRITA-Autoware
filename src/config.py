@@ -15,28 +15,21 @@ LOGGING_FORMAT = (
 )
 
 # ENVIRONMENT SETTINGS
-AV_TESTING_APPROACH = "AutowareScenarios"  # AutowareScenarios
 DOCKER_CONTAINER_NAME = "scenoRITA_autoware"
-MAX_RECORD_TIME = 60  # 10/30/50
-AUTOWARE_CMD_PREPARE_TIME = 25
+MAX_RECORD_TIME = 60  # max time to record a scenario
+AUTOWARE_CMD_PREPARE_TIME = 25  # time to prepare for Scenario Simulator v2
 DEFAULT_SCRIPT_PORT = 5555
-CONTAINER_NUM = 3  # 3/4/5  # todo:
-DOCKER_IMAGE_ID = "5d3ce2be2fc7"  # todo:
+CONTAINER_NUM = 3  # 3/4/5  # the number of docker container in parallel
+DOCKER_IMAGE_ID = "5d3ce2be2fc7"  # todo: to fill in your image id
 
-# DIRECTORIES
-DIR_ROOT = str(Path(__file__).parent.parent.parent)  # outside of scenorita-autoware
+DIR_ROOT = str(Path(__file__).parent.parent.parent)
 PROJECT_ROOT = str(Path(__file__).parent.parent)
-FEATURES_CSV_DIR = f'{PROJECT_ROOT}/data/violation_features'
 
 ADS_ROOT = f'{DIR_ROOT}/autoware'
-ADS_MAP_DIR = f'{DIR_ROOT}/autoware_map/autoware_scenario_data/maps' # todo: change to f'{DIR_ROOT}/autoware_map/autoware_scenario_data/maps'
+ADS_MAP_DIR = f'{DIR_ROOT}/autoware_maps'
 SUPPORTED_MAPS = list(x.name for x in Path(ADS_MAP_DIR).iterdir() if x.is_dir())
-ADS_SCENARIO_DIR = f'{PROJECT_ROOT}/out'
-ADS_TEMP_SCENARIO_DIR = f'{PROJECT_ROOT}/out/temp_scenarios'
 
-# TMP_RECORDS_DIR = f'{ADS_RECORDS_OUTPUT_DIR}/scenario_test_runner'
 TMP_RECORDS_DIR = f'/tmp/scenario_test_runner'
-ADS_RECORDS_DIR = f'{ADS_ROOT}/records/records_for_analysis'
 
 PRE_SCRIPTS_DIR = f'{PROJECT_ROOT}/data/scripts'
 MY_SCRIPTS_DIR = f"{ADS_ROOT}/scripts"

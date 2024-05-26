@@ -1,7 +1,7 @@
 from collections import defaultdict
 from typing import Optional, Dict
 
-from autoware_auto_perception_msgs.msg import TrackedObjects, TrackedObject
+from autoware_auto_perception_msgs.msg import TrackedObjects
 from geometry_msgs.msg import Pose
 from nav_msgs.msg import Odometry
 

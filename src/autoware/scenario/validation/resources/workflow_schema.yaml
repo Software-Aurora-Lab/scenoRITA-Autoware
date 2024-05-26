@@ -1,3 +1,0 @@
-Scenario: list(include('scenario'))
----
-scenario: { frame-rate: num(required=False), path: str() }

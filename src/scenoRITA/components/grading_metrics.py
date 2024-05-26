@@ -37,6 +37,9 @@ def grade_scenario(scenario_id: str, record: Path) -> Optional[GradingResult]:
             metrics = registered_metrics()
             record_file = RecordAnalyzer(str(record), metrics)
             violations = record_file.analyze()
+            if violations is None:
+                # if there are no localization messages or ground truth perception messages
+                return None
             collision, speeding, unsafe_lane_change, comfort = metrics
 
             comfort_fitness = comfort.get_fitness()

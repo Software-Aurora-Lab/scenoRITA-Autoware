@@ -1,32 +1,16 @@
 import time
 import subprocess
 from pathlib import Path
-from threading import Thread
 
 from autoware.open_scenario import OpenScenario
 from config import MAX_RECORD_TIME, MY_SCRIPTS_DIR, AUTOWARE_CMD_PREPARE_TIME, TMP_RECORDS_DIR
 from utils import get_output_dir
 
 
-def replay_scenarios_in_threading(scenario_list, containers):
-    sub_scenario_list_list = [scenario_list[x:x + len(containers)] for x in
-                              range(0, len(scenario_list), len(containers))]
-    for sub_scenario_list in sub_scenario_list_list:
-        thread_list = []
-        for scenario, container in zip(sub_scenario_list, containers):
-            t_replay = Thread(target=replay_scenario, args=(scenario, container,))
-            thread_list.append(t_replay)
-        for thread in thread_list:
-            thread.start()
-        for thread in thread_list:
-            thread.join()
-
-
 def replay_scenario(scenario: OpenScenario, container):
     container.kill_process()
     start_replay(scenario, container)
     move_scenario_record_dir(scenario, container)
-    # scenario.update_scenario_record_dir_info()
 
 
 def move_scenario_record_dir(scenario: OpenScenario, container):
