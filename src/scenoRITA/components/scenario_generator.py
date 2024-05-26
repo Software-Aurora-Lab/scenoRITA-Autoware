@@ -108,7 +108,7 @@ class ScenarioGenerator:
                     final_lane_id
                 )
                 final_xes, _ = final_central_curve.xy
-                final_index = random.randint(0, len(final_xes) - 2) # fixme: if the final lane is the same as the initial lane, the final index should be greater than the initial index
+                final_index = random.randint(0, len(final_xes) - 2)
 
                 return (
                     ObstaclePosition(initial_lane_id, initial_index,
@@ -244,7 +244,7 @@ class ScenarioGenerator:
                     final_lane_cg_neighbours = self.map_service.get_changable_neighbours(final_lane_id)
                     if len(final_lane_cg_neighbours) != 0:
                         if random.random() < 0.8:
-                            # print("randomly choosing a lane from the changeable neighbours")
+                            # force lane change due to limited execution time
                             candidate = random.choice(final_lane_cg_neighbours)
                             if self.map_service.get_length_of_lane(candidate) >= k_min_lane_length:
                                 final_lane_id = candidate
