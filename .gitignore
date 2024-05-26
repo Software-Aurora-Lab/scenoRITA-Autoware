@@ -10,6 +10,8 @@ src/test.py
 tests/output/*
 .idea/
 data/autoware_maps/
+src/visualization/*.png
+src/visualization/*.jpg
 # Created by https://www.toptal.com/developers/gitignore/api/python,macos,visualstudiocode,linux
 # Edit at https://www.toptal.com/developers/gitignore?templates=python,macos,visualstudiocode,linux
 
