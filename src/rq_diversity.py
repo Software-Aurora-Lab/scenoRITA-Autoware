@@ -193,25 +193,46 @@ def check_routing_msgs(root: Path) -> None:
 
 
 if __name__ == "__main__":
+    # Experiment 1
     scenoRITA_shalun_path = Path(
         fr"{PROJECT_ROOT}/out/0503_155808_Shalun with road shoulders/records"
-    )
+    )  # 5-15 obstacles
+    # Experiment 3
     scenoRITA_nishi_path = Path(
         fr"{PROJECT_ROOT}/out/0504_055929_Nishi-Shinjuku/records"
-    )
+    )  # 5-15 obstacles
+    # Experiment 2
     scenoRITA_hsinchu_path = Path(
         fr"{PROJECT_ROOT}/out/0503_024541_Hsinchu city (Taiwan)/records"
-    )
-
+    )  # 5-15 obstacles
+    # Experiment 4
     scenoRITA_nishi_path_2 = Path(
         fr"{PROJECT_ROOT}/out/0505_232108_Nishi-Shinjuku/records"
     )
+    # Experiment 6
+    scenoRITA_virtual_map = Path(
+        fr"{PROJECT_ROOT}/out/0508_004054_awf_cicd_virtualmap/records"
+    )
+    #######################################################################
+    # Experiment 5
+    scenoRITA_nishi_8hrs = Path(
+        fr"{PROJECT_ROOT}/out/0509_111556_Nishi-Shinjuku/records"
+    )
+    # Experiemnt 7
+    scenoRITA_awf_8hrs = Path(
+        fr"{PROJECT_ROOT}/out/0509_224655_awf_cicd_virtualmap/records"
+    )
 
     exp_records = [
-        ("Shalun with road shoulders", scenoRITA_shalun_path, "scenoRITA"),
+        # ("Shalun with road shoulders", scenoRITA_shalun_path, "scenoRITA"),
         # ("Nishi-Shinjuku", scenoRITA_nishi_path, "scenoRITA"),
         # ("Nishi-Shinjuku", scenoRITA_nishi_path_2, "scenoRITA"),
-        # ("Hsinchu city (Taiwan)", scenoRITA_hsinchu_path, "scenoRITA")
+        # ("Hsinchu city (Taiwan)", scenoRITA_hsinchu_path, "scenoRITA"),
+        # ("Hsinchu city (Taiwan)", scenoRITA_hsinchu_2_hour, "scenoRITA"),
+        # ("awf_cicd_virtualmap", scenoRITA_virtual_map, "scenoRITA"),
+        #######################################################################
+        # ("Nishi-Shinjuku", scenoRITA_nishi_8hrs, "scenoRITA")
+        ("awf_cicd_virtualmap", scenoRITA_awf_8hrs, "scenoRITA"),
     ]
     # todo: draw one by one
 
@@ -219,9 +240,9 @@ if __name__ == "__main__":
         if record_root != "" and record_root.exists():
             start = time.perf_counter()
             logger.info(f"Plotting {map_name} {approach_name}")
-            # plot_experiment_heatmap(
-            #     map_name, record_root, Path(record_root, f"{record_root.parent.name}_{approach_name}.png")
-            # )
-            check_routing_msgs(record_root)
+            plot_experiment_heatmap(
+                map_name, record_root, Path(record_root, f"{record_root.parent.name}_{approach_name}.png")
+            )
+            # check_routing_msgs(record_root)
             minutes = (time.perf_counter() - start) / 60
             logger.info(f"Finished {map_name} {approach_name} in {minutes:.2f} minutes")
