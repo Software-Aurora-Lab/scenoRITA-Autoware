@@ -1,3 +1,5 @@
+from loguru import logger
+
 from scenoRITA.components.oracles.BasicMetric import BasicMetric
 from scenoRITA.components.oracles.MetricManager import MetricManager
 from autoware.rosbag_reader import ROSBagReader
@@ -41,9 +43,17 @@ class RecordAnalyzer:
                     self.oracle_manager.on_new_message(topic, msg, t)
                 except OracleInterrupt:
                     break
-        assert has_localization, "No localization in record"
-        assert has_ground_truth, "No ground truth in record"
         del reader
+        # assert has_localization, "No localization in record"
+        # assert has_ground_truth, "No ground truth in record"
+        if not has_localization:
+            # if there are no localization messages
+            logger.warning("No localization in record")
+            return None
+        if not has_ground_truth:
+            # if there are no ground truth perception messages
+            logger.warning("No ground truth in record")
+            return None
         return self.get_results()
 
     def get_results(self):
