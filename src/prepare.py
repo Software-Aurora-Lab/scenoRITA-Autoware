@@ -4,7 +4,7 @@ from pathlib import Path
 
 import gdown
 
-from config import MY_SCRIPTS_DIR, DIR_ROOT, ADS_ROOT, PRE_SCRIPTS_DIR, PROJECT_ROOT
+from config import MY_SCRIPTS_DIR, DIR_ROOT, ADS_ROOT, PRE_SCRIPTS_DIR, PROJECT_ROOT, ADS_MAP_DIR
 from tools.file_handling import move_file
 
 
@@ -12,7 +12,7 @@ def download_maps():
     zip_file = gdown.download(id='1aDC6cnWzmB-6KnvF_JxIcjSahe0EymB2')
     zip_file_path = Path(zip_file)
 
-    output_dir_path = Path(f"{PROJECT_ROOT}/data/")
+    output_dir_path = Path(f"{ADS_MAP_DIR}").parent
 
     with zipfile.ZipFile(zip_file, 'r') as zip_ref:
         zip_ref.extractall(output_dir_path)
