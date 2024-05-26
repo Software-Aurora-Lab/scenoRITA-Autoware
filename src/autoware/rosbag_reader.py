@@ -23,7 +23,6 @@ class ROSBagReader:
         self.yaml = None
         # create a message type map
         topics_data = self.sql_cursor.execute("SELECT id, name, type FROM topics").fetchall()
-        self.topic_type = {name_of: type_of for id_of, name_of, type_of in topics_data}
         self.topic_id = {name_of: id_of for id_of, name_of, type_of in topics_data}
         self.topic_msg_message = {name_of: get_message(type_of) for id_of, name_of, type_of in topics_data}
 
@@ -78,10 +77,3 @@ class ROSBagReader:
         for tm in tp_msgs:
             if tm['topic_metadata']['name'] == '/planning/mission_planning/route':
                 return tm['message_count'] > 0
-
-    def get_messages(self, topic_name: str):
-        topic_id = self.topic_id[topic_name]
-        rows = self.sql_cursor.execute(
-            "SELECT timestamp, data FROM messages WHERE topic_id = {}".format(topic_id)).fetchall()
-        print(type(rows[0][0]), type(rows[0][1]))
-        return [(timestamp, deserialize_message(data, self.topic_msg_message[topic_name])) for timestamp, data in rows]
