@@ -1,7 +1,6 @@
 import sqlite3
 import os
 import glob
-from collections import defaultdict
 
 import yaml
 from rosidl_runtime_py.utilities import get_message
@@ -27,13 +26,6 @@ class ROSBagReader:
         self.topic_msg_message = {name_of: get_message(type_of) for id_of, name_of, type_of in topics_data}
 
         self.fetch_all_msgs_sql = "select topics.name as topic, data as message, timestamp as t from messages join topics on messages.topic_id = topics.id order by timestamp"
-
-        unique_topic = set(list(self.topic_id.keys()))
-        self.grouped_topic = defaultdict(list)
-
-        for topic in unique_topic:
-            splited = topic.split('/')
-            self.grouped_topic[splited[1]].append(topic)
 
     def get_file_path(self, extension: str) -> str:
         pattern = os.path.join(self.bag_dir_path, f'*.{extension}')
