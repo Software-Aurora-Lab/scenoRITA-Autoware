@@ -4,10 +4,8 @@ from pathlib import Path
 from typing import List, Optional, Tuple
 
 import pandas as pd
-from absl import app, flags
+from absl import flags
 from loguru import logger
-
-from autoware.map_service import load_map_service
 from mylib.clustering import cluster
 from scenoRITA.components.grading_metrics import GradingResult, grade_scenario
 from utils import PROJECT_ROOT
@@ -91,6 +89,13 @@ def cluster_violations(root: Path) -> None:
     if len(violation_csvs) == 0:
         print("No violations found")
 
+    a = []
+
+    for vc in violation_csvs:
+        if '_out' in str(vc):
+            continue
+        a.append(vc)
+    violation_csvs = a
     violation_csvs.sort(key=lambda x: get_priority(x.name.split(".")[0]))
     for csv_file in violation_csvs:
         violation_name = csv_file.name[:-4]
@@ -98,21 +103,54 @@ def cluster_violations(root: Path) -> None:
         num_violations = len(clustered_df)
         num_clusters = len(clustered_df["cluster"].unique())
         print(violation_name, num_violations, num_clusters)
-        out_dir = Path(PROJECT_ROOT, "out")
-        out_dir.mkdir(exist_ok=True)
-        clustered_df.to_csv(Path(out_dir, f"{violation_name}_out.csv"))
+        clustered_df.to_csv(Path(root, f"{violation_name}_out.csv"))
 
 
 def main(args) -> None:
     del args
     root_dir = Path(flags.FLAGS.dir)
-    load_map_service(flags.FLAGS.map)
     assert root_dir.exists(), f"{root_dir} does not exist"
-    check_violations(root_dir, flags.FLAGS.map)
     cluster_violations(root_dir)
 
 
 if __name__ == "__main__":
-    flags.DEFINE_string("dir", None, "Experiment root directory", required=True)  # something like out/xxx/records
-    flags.DEFINE_string("map", None, "Map name", required=False)
-    app.run(main)
+    scenoRITA_shalun_path = Path(
+        fr"{PROJECT_ROOT}/out/0503_155808_Shalun with road shoulders/violations"
+    )
+    scenoRITA_nishi_path = Path(
+        fr"{PROJECT_ROOT}/out/0504_055929_Nishi-Shinjuku/violations"
+    )
+    scenoRITA_hsinchu_path = Path(
+        fr"{PROJECT_ROOT}/out/0503_024541_Hsinchu city (Taiwan)/violations"
+    )
+
+    scenoRITA_nishi_path_2 = Path(
+        fr"{PROJECT_ROOT}/out/0505_232108_Nishi-Shinjuku/violations"
+    )
+
+    scenoRITA_awf_cicd_virtualmap = Path(
+        fr"{PROJECT_ROOT}/out/0508_004054_awf_cicd_virtualmap/violations"
+    )
+
+    ##############
+    scenoRITA_nishi_8hrs = Path(
+        fr"{PROJECT_ROOT}/out/0509_111556_Nishi-Shinjuku/violations"
+    )
+
+    scenoRITA_awf_8hrs = Path(
+        fr"{PROJECT_ROOT}/out/0509_224655_awf_cicd_virtualmap/violations"
+    )
+
+    exp_records = [
+        ("Shalun with road shoulders", scenoRITA_shalun_path, "scenoRITA"),
+        ("Nishi-Shinjuku", scenoRITA_nishi_path, "scenoRITA"),
+        ("Nishi-Shinjuku", scenoRITA_nishi_path_2, "scenoRITA"),
+        ("Hsinchu city (Taiwan)", scenoRITA_hsinchu_path, "scenoRITA"),
+        ("awf_cicd_virtualmap", scenoRITA_awf_cicd_virtualmap, "scenoRITA"),
+
+        ("Nishi-Shinjuku", scenoRITA_nishi_8hrs, "scenoRITA"),  # todo: only keep one
+        ("awf_cicd_virtualmap", scenoRITA_awf_8hrs, "scenoRITA")
+    ]
+
+    for _, p, _ in exp_records:
+        cluster_violations(p)
