@@ -127,4 +127,4 @@ Regarding the generation of the ego car, you can find an explanation in this [no
 
 ## autoware/autoware_record/record.py
 
-You can refer to [autoware_record](https://github.com/lethal233/autoware_record) on how to use it.  for instructions on its usage. This is an updated version of `rosbag_reader.py`. Currently, we have completed unit testing of `autoware_record`, but integration testing with scenoRITA is still pending. Therefore, we are using `rosbag_reader.py` to read all the records for now.
+You can refer to [autoware_record](https://github.com/lethal233/autoware_record) for instructions on its usage. This is an updated version of `rosbag_reader.py`. Currently, we have completed unit testing of `autoware_record`, but integration testing with scenoRITA is still pending. Therefore, we are using `rosbag_reader.py` to read all the records for now.
