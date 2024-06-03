@@ -115,3 +115,6 @@ This is an implementation of scenoRITA that supports Autoware Universe v1.0.
 
 After running the command, the output of scenoRITA will be stored under `out/{execution_id}` and you can find violations
 detected under `out/{execution_id}/violations`
+
+## NOTES
+See [notes](./NOTES.md)
