@@ -128,3 +128,21 @@ Regarding the generation of the ego car, you can find an explanation in this [no
 ## autoware/autoware_record/record.py
 
 You can refer to [autoware_record](https://github.com/lethal233/autoware_record) for instructions on its usage. This is an updated version of `rosbag_reader.py`. Currently, we have completed unit testing of `autoware_record`, but integration testing with scenoRITA is still pending. Therefore, we are using `rosbag_reader.py` to read all the records for now.
+
+The most different part is that when using `rosbag_reader.py`, you should deserialize the message manually after calling `read_messages()`. In `src/scenoRITA/components/oracles/__init__.py`:
+
+```py
+        for topic, message, t in reader.read_messages():
+            if not has_localization and topic == '/localization/kinematic_state':
+                has_localization = True
+            if not has_ground_truth and topic == '/perception/object_recognition/ground_truth/objects':
+                has_ground_truth = True
+            if topic in self.topic_names():
+                msg = reader.deserialize_msg(message, topic) <----------- 
+                try:
+                    self.oracle_manager.on_new_message(topic, msg, t)
+                except OracleInterrupt:
+                    break
+```
+
+However, when using the updated `autoware/autoware_record/record.py`, please refer to [Speed Up Read](https://github.com/lethal233/autoware_record/blob/main/README.md#speed-up-read-recommended) for instruction to use. In this case, you do not need to manually call `deserialize_msg()` anymore.
