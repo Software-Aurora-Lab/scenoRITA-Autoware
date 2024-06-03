@@ -84,7 +84,8 @@ This is an implementation of scenoRITA that supports Autoware Universe v1.0.
    source ~/.bashrc
    source install/setup.bash
    ```
-10. On your host machine, run the following command to download maps and move scripts:
+10. Download the maps [here](https://drive.google.com/file/d/1HBBDCtSubJ7pJX6acTaAbWP0COYXCnMs/view?usp=sharing) and de-compress it under `${ADS_MAP_DIR}`, which is defined in `config.py`
+11. On your host machine, run the following command to download maps and move scripts:
     ```bash
     python3 /path/to/scenoRITA_Autoware/src/prepare.py
     ```
