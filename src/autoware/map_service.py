@@ -23,8 +23,10 @@ LOADED = False
 
 
 def load_map_service(map_name: str) -> "MapService":
+    global LOADED
     if not LOADED:
         MapLoader(map_name)
+        LOADED = True
     return MapService.instance()
 
 
