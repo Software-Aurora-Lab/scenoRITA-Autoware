@@ -146,3 +146,17 @@ The most different part is that when using `rosbag_reader.py`, you should deseri
 ```
 
 However, when using the updated `autoware/autoware_record/record.py`, please refer to [Speed Up Read](https://github.com/lethal233/autoware_record/blob/main/README.md#speed-up-read-recommended) for instruction to use. In this case, you do not need to manually call `deserialize_msg()` anymore.
+
+
+## Record efficiency
+
+For now, we modified the source code like this:
+
+![image](https://github.com/lethal233/scenoRITA-Autoware/assets/47763046/3d38a810-e681-4b5e-b882-823a2f6fa397)
+
+However, here is one potential issue:
+We only record the necessary topics for record analysis (many planning topics are not recorded)
+
+To resolve this, we may have two solutions:
+1. Identify more planning topics and modify the source code accordingly
+2. Modify the source code to compress the ROS bag file (Additional notes: the compressed ROS bag file should be de-compressed and then analyzed)
