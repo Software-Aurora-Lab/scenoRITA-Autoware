@@ -160,3 +160,8 @@ We only record the necessary topics for record analysis (many planning topics ar
 To resolve this, we may have two solutions:
 1. Identify more planning topics and modify the source code accordingly
 2. Modify the source code to compress the ROS bag file (Additional notes: the compressed ROS bag file should be de-compressed and then analyzed)
+
+## Compatibility
+
+
+Currently, the reduced installation of Autoware is compatible with the Autoware Universe v1.0 branch. However, you might encounter issues if you pair the reduced installation with the Autoware Universe main branch, as Autoware developers are actively evolving the custom ROS messages and services.
