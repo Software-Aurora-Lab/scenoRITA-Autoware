@@ -161,7 +161,25 @@ To resolve this, we may have two solutions:
 1. Identify more planning topics and modify the source code accordingly
 2. Modify the source code to compress the ROS bag file (Additional notes: the compressed ROS bag file should be de-compressed and then analyzed)
 
+Reference:
+https://github.com/tier4/scenario_simulator_v2/blob/0ba20f90dd4710672a959a34e25c9615b589250f/openscenario/openscenario_interpreter/src/openscenario_interpreter.cpp#L202
+
 ## Compatibility
 
 
 Currently, the reduced installation of Autoware is compatible with the Autoware Universe v1.0 branch. However, you might encounter issues if you pair the reduced installation with the Autoware Universe main branch, as Autoware developers are actively evolving the custom ROS messages and services.
+
+## Integrate Traffic Lights Feature
+
+We do not configure traffic lights in the scenario description file. If you want to use traffic light features, there is one file you need to modify before [Installation Step 11](https://github.com/Software-Aurora-Lab/scenoRITA-Autoware/tree/main?tab=readme-ov-file#installation): [run_scenario.sh](https://github.com/Software-Aurora-Lab/scenoRITA-Autoware/blob/main/data/scripts/run_scenario.sh).
+
+You should modify it according to this [post](https://github.com/tier4/scenario_simulator_v2/issues/1236):
+
+Changing this line of code
+https://github.com/Software-Aurora-Lab/scenoRITA-Autoware/blob/1ead447d65e003a99a68bdba7886e8985c69307d/data/scripts/run_scenario.sh#L5
+
+to
+
+```sh
+architecture_type:=awf/universe/20230906
+```
