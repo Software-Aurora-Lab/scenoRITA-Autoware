@@ -9,9 +9,6 @@ This is an implementation of scenoRITA that supports Autoware Universe v1.0.
 3. [Python Poetry](https://python-poetry.org/)
 4. [Python 3.10.12](https://www.python.org/downloads/release/python-31012/)
 5. [ROS2 Humble](https://docs.ros.org/en/humble/index.html)
-6. [Reduced Installation of Autoware](https://github.com/lethal233/autoware)
-
-[//]: # (> You can run scripts under `data/scripts/install` to install the prerequisites.)
 
 ## File Structure
 
