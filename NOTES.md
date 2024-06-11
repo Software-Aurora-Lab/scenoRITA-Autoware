@@ -1,5 +1,9 @@
 # NOTES when running scenoRITA
 
+## Record Analysis & Scenario Generation
+
+If you only need to generate test scenarios or analyze the record file, or if your PC cannot support the full installation of Autoware, you can opt for the [Reduced Installation of Autoware](https://github.com/lethal233/autoware) instead. This reduced version includes the essential packages needed to analyze maps and deserialize record data.
+
 ## map_service.py
 
 As for now, we set the traffic rules using the lanelet2 built-in value (Germany). The best way is to define a custom [traffic rule class](https://github.com/fzi-forschungszentrum-informatik/Lanelet2/blob/master/lanelet2_traffic_rules/README.md) and use it for routing.
